@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trip Planner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#707070',
+                        accent: '#A67C52',
+                        'accent-light': '#D4C4B0',
+                        surface: '#FFFFFF',
+                        background: '#E7E4DD',
+                        border: '#D4D0C8',
+                        text: '#707070',
+                        'text-secondary': '#8E8E93',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <!-- JS Modules (order matters: config first, then dependencies) -->
+    <script src="js/config.js" defer></script>
+    <script src="js/storage.js" defer></script>
+    <script src="js/search.js" defer></script>
+    <script src="js/map.js" defer></script>
+    <script src="js/events.js" defer></script>
+    <script src="js/trips.js" defer></script>
+    <script src="js/ui.js" defer></script>
+    <script src="js/checklist.js" defer></script>
+    <script src="navigation.js" defer></script>
+    <script src="js/main.js" defer></script>
+</head>
+<body>
+    <div id="app">
+        
+        <!-- ============================================ -->
+        <!-- SHARED TRIP EDITOR HEADER (used by all pages in trip editor mode) -->
+        <!-- ============================================ -->
+        <div id="shared-planner-header" class="planner-header hidden">
+            <button id="back-to-trips" class="back-btn">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <h2 id="trip-title">My Trip</h2>
+            <button id="add-event-btn" class="btn-primary btn-add-event">
+                <i data-lucide="plus"></i>
+            </button>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- PAGE 1: Schedules (行程表) - Trip Planner -->
+        <!-- ============================================ -->
+        <div id="schedules-page" class="page-content">
+            <!-- Trip List View (Default) -->
+            <div id="trip-list-view">
+                <header class="page-header">
+                    <h1>あなたの旅</h1>
+                    <p class="section-subtitle">Your Trips</p>
+                </header>
+                
+                <main class="home-main">
+                    <!-- Saved Trips Section -->
+                    <div id="saved-trips-section" class="saved-trips-section hidden">
+                        <div id="saved-trips-list" class="saved-trips-list">
+                            <!-- Saved trips will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Empty State when no trips -->
+                    <div id="no-trips-state" class="empty-trips-state">
+                        <i data-lucide="map-pin" class="empty-icon"></i>
+                        <p>No trips yet</p>
+                        <p class="empty-hint">Go to "Add Trip" to create your first adventure!</p>
+                    </div>
+                </main>
+            </div>
+            
+            <!-- Trip Planner View (When trip is selected) -->
+            <div id="trip-planner-view" class="hidden">
+                <main class="planner-main">
+                    <!-- Map Section -->
+                    <section class="map-section">
+                        <div id="map-search-container" class="map-search-container">
+                            <input type="text" id="map-search-input" class="map-search-input" placeholder="Search location...">
+                            <button id="map-search-btn" class="map-search-btn">
+                                <i data-lucide="search"></i>
+                            </button>
+                            <div id="search-results" class="search-results hidden"></div>
+                        </div>
+                        <div id="map-container">
+                            <div id="map"></div>
+                        </div>
+                        <button id="map-toggle-btn" class="map-toggle-btn" title="Collapse Map">
+                            <i data-lucide="chevron-up"></i>
+                        </button>
+                    </section>
+                    
+                    <!-- Events List Section -->
+                    <section class="events-section">
+                        <div class="events-header">
+                            <h3>Schedule</h3>
+                            <div class="header-right">
+                                <span id="event-count" class="event-count">0 events</span>
+                                <button id="filter-toggle" class="filter-toggle-btn" title="Toggle Filters">
+                                    <i data-lucide="sliders-horizontal"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Collapsible Filters -->
+                        <div id="filters-panel" class="filters-panel collapsed">
+                            <div class="filters-row">
+                                <div class="filter-item">
+                                    <label for="date-filter-select">Date</label>
+                                    <select id="date-filter-select" class="filter-select">
+                                        <option value="">All Dates</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="category-filter-select">Category</label>
+                                    <select id="category-filter-select" class="filter-select">
+                                        <option value="">All Categories</option>
+                                        <option value="hotel">Hotel</option>
+                                        <option value="breakfast">Breakfast</option>
+                                        <option value="lunch">Lunch</option>
+                                        <option value="dinner">Dinner</option>
+                                        <option value="view">View/Attraction</option>
+                                        <option value="play">Activity/Play</option>
+                                        <option value="transportation">Transportation</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="events-list" class="events-list">
+                            <div class="empty-state">
+                                <i data-lucide="map-pin" class="empty-icon"></i>
+                                <p>No events yet</p>
+                                <p class="empty-hint">Click on the map or tap "+" to create one</p>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- PAGE 2: Checklist (準備) -->
+        <!-- ============================================ -->
+        <div id="checklist-page" class="page-content hidden">
+            <header class="page-header">
+                <h1>準備</h1>
+                <p class="section-subtitle">Checklist</p>
+            </header>
+            <main class="checklist-main">
+                <div class="checklist-container">
+                    <div class="checklist-header">
+                        <div class="checklist-progress">
+                            <span id="checked-count">0</span>/<span id="total-count">0</span> <span id="items-packed-text">items packed</span>
+                        </div>
+                        <div class="checklist-actions">
+                            <button id="add-checklist-item-btn" class="btn-primary btn-add-item">
+                                <i data-lucide="plus"></i>
+                                <span id="add-item-text">Add Item</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="checklist-items" class="checklist-items">
+                        <!-- Checklist items will be populated here -->
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- PAGE 3: Add Trip (加新行程) - Create New Trip -->
+        <!-- ============================================ -->
+        <div id="add-trip-page" class="page-content hidden">
+            <header class="page-header">
+                <h1>新しい旅を作る</h1>
+                <p class="section-subtitle">Create New Trip</p>
+            </header>
+            
+            <main class="home-main">
+                <!-- Create New Trip Section -->
+                <div class="create-trip-section">
+                    <button id="create-custom-trip-main" class="create-trip-btn">
+                        <i data-lucide="plus-circle"></i>
+                        <span>Create Custom Trip</span>
+                    </button>
+                </div>
+                
+                <!-- Template Trips Section -->
+                <div class="trip-options">
+                    <h3>テンプレートから選ぶ</h3>
+                    <p class="section-subtitle">Choose from Templates</p>
+                    <div class="templates">
+                        <div class="template-card" data-template="japan-toyama">
+                            <i data-lucide="mountain-snow" class="template-icon"></i>
+                            <h4>富山 4日間の旅</h4>
+                            <p class="template-subtitle">4-Day Japan Toyama Trip</p>
+                            <div class="trip-dates">
+                                <span class="date-badge">Apr 1-4</span>
+                            </div>
+                            <button class="select-template">選択</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- PAGE 4: Track (記賬) - Placeholder -->
+        <!-- ============================================ -->
+        <div id="track-page" class="page-content hidden">
+            <header class="page-header">
+                <h1>記賬</h1>
+                <p class="section-subtitle">Expense Tracker</p>
+            </header>
+            <main class="placeholder-main">
+                <div class="placeholder-content">
+                    <i data-lucide="coins" class="placeholder-icon"></i>
+                    <h2>Coming Soon</h2>
+                    <p>Track your trip expenses</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- PAGE 5: Settings (設置) -->
+        <!-- ============================================ -->
+        <div id="settings-page" class="page-content hidden">
+            <header class="page-header">
+                <h1>設置</h1>
+                <p class="section-subtitle">Settings</p>
+            </header>
+            <main class="settings-main">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Language 言語</h3>
+                    <div class="settings-options">
+                        <button class="settings-option active" data-lang="en">
+                            <span class="lang-flag">🇬🇧</span>
+                            <span class="lang-name">English</span>
+                            <i data-lucide="check" class="check-icon"></i>
+                        </button>
+                        <button class="settings-option" data-lang="zh-TW">
+                            <span class="lang-flag">🇹🇼</span>
+                            <span class="lang-name">繁體中文</span>
+                            <i data-lucide="check" class="check-icon hidden"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Data データ</h3>
+                    <button id="clear-all-data" class="settings-danger-btn">
+                        <i data-lucide="trash-2"></i>
+                        <span>Clear All Data</span>
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- BOTTOM NAVIGATION BAR -->
+        <!-- ============================================ -->
+        <!-- Landing Page Nav (3 buttons) -->
+        <nav id="landing-nav" class="bottom-nav">
+            <button class="nav-item active" data-page="schedules">
+                <i data-lucide="list"></i>
+                <span class="nav-label" id="nav-trip-list">Trip List</span>
+            </button>
+            <button class="nav-item nav-item-center" data-page="addTrip">
+                <i data-lucide="plus-circle"></i>
+                <span class="nav-label" id="nav-add-trip">Add Trip</span>
+            </button>
+            <button class="nav-item" data-page="settings">
+                <i data-lucide="settings"></i>
+                <span class="nav-label" id="nav-settings">Settings</span>
+            </button>
+        </nav>
+        
+        <!-- Trip Editor Nav (6 buttons) -->
+        <nav id="trip-editor-nav" class="bottom-nav hidden">
+            <button class="nav-item active" data-page="schedule-editor">
+                <i data-lucide="calendar-days"></i>
+                <span class="nav-label" id="nav-schedule">Schedule</span>
+            </button>
+            <button class="nav-item" data-page="map-editor">
+                <i data-lucide="map"></i>
+                <span class="nav-label" id="nav-map">Map</span>
+            </button>
+            <button class="nav-item nav-item-center" data-page="addEvent">
+                <i data-lucide="plus-circle"></i>
+                <span class="nav-label" id="nav-add-event">Add Event</span>
+            </button>
+            <button class="nav-item" data-page="track">
+                <i data-lucide="dollar-sign"></i>
+                <span class="nav-label" id="nav-track">Track</span>
+            </button>
+            <button class="nav-item" data-page="checklist">
+                <i data-lucide="check-square"></i>
+                <span class="nav-label" id="nav-checklist">Checklist</span>
+            </button>
+            <button class="nav-item" data-page="settings">
+                <i data-lucide="settings"></i>
+                <span class="nav-label" id="nav-settings2">Settings</span>
+            </button>
+        </nav>
+    </div>
+    
+    <!-- Add/Edit Event Modal -->
+    <div id="event-modal" class="modal hidden">
+        <div class="modal-overlay" data-close-modal></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Event</h3>
+                <button class="close-modal" id="close-modal" data-close-modal>
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="event-form">
+                <div class="form-group">
+                    <label for="event-name">
+                        <span class="required">*</span> Event Name
+                    </label>
+                    <input type="text" id="event-name" placeholder="Enter event name" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-location">
+                        <span class="required">*</span> Location
+                    </label>
+                    <input type="text" id="event-location" placeholder="Enter location" required>
+                </div>
+                <div class="form-group datetime-group">
+                    <label>
+                        <span class="required">*</span> Date & Time
+                    </label>
+                    <div class="datetime-selects">
+                        <select id="event-date-select" class="datetime-select" required>
+                            <option value="">Select Date</option>
+                        </select>
+                        <select id="event-time-select" class="datetime-select" required>
+                            <option value="">Select Time</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-category">
+                        <span class="required">*</span> Category
+                    </label>
+                    <div class="select-wrapper">
+                        <select id="event-category" required>
+                            <option value="">Select Category</option>
+                            <option value="hotel">🏨 Hotel</option>
+                            <option value="breakfast">🍳 Breakfast</option>
+                            <option value="lunch">🍱 Lunch</option>
+                            <option value="dinner">🍛 Dinner</option>
+                            <option value="view">🏞️ View/Attraction</option>
+                            <option value="play">🎡 Activity/Play</option>
+                            <option value="transportation">🚌 Transportation</option>
+                        </select>
+                        <span class="select-arrow">▼</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-description">Description</label>
+                    <textarea id="event-description" placeholder="Add notes about this event"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-add" class="btn-secondary">Cancel</button>
+                    <button type="submit" id="confirm-add" class="btn-primary">Add Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- New Trip Modal -->
+    <div id="new-trip-modal" class="modal hidden">
+        <div class="modal-overlay" data-close-modal></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="new-trip-modal-title">Create New Trip</h3>
+                <button class="close-modal" id="close-new-trip-modal" data-close-modal>
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="new-trip-form">
+                <div class="form-group">
+                    <label for="trip-name-input">
+                        <span class="required">*</span> Trip Name
+                    </label>
+                    <input type="text" id="trip-name-input" placeholder="Enter trip name" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <span class="required">*</span> Date Range
+                    </label>
+                    <div class="trip-date-range-inputs">
+                        <div class="date-range-item">
+                            <label for="trip-start-date-input">Start Date</label>
+                            <input type="date" id="trip-start-date-input" class="trip-date-input" required>
+                        </div>
+                        <span class="date-separator">to</span>
+                        <div class="date-range-item">
+                            <label for="trip-end-date-input">End Date</label>
+                            <input type="date" id="trip-end-date-input" class="trip-date-input" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-new-trip" class="btn-secondary">Cancel</button>
+                    <button type="submit" id="confirm-new-trip" class="btn-primary">Create Trip</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Template Preview Modal -->
+    <div id="template-preview-modal" class="modal hidden">
+        <div class="modal-overlay" data-close-modal></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="template-preview-title">Template Preview</h3>
+                <button class="close-modal" id="close-template-modal" data-close-modal>
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="template-preview-body">
+                <!-- Template Info -->
+                <div class="template-info-section">
+                    <div class="template-icon-large" id="template-icon-large">
+                        <i data-lucide="mountain-snow"></i>
+                    </div>
+                    <h4 id="template-display-name">Template Name</h4>
+                    <p id="template-display-desc">Template description</p>
+                    <div class="template-meta">
+                        <span class="template-duration"><i data-lucide="calendar"></i> <span id="template-duration">4 days</span></span>
+                        <span class="template-events-count"><i data-lucide="map-pin"></i> <span id="template-events-count">4 events</span></span>
+                    </div>
+                </div>
+                
+                <!-- Template Events Preview -->
+                <div class="template-events-preview">
+                    <h5>Itinerary Preview</h5>
+                    <div id="template-events-list" class="template-events-list">
+                        <!-- Events will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Save Template Form -->
+                <form id="save-template-form" class="save-template-form">
+                    <h5>Save This Trip</h5>
+                    <div class="form-group">
+                        <label for="template-trip-name">
+                            <span class="required">*</span> Trip Name
+                        </label>
+                        <input type="text" id="template-trip-name" placeholder="Enter trip name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <span class="required">*</span> Trip Dates
+                        </label>
+                        <div class="trip-date-range-inputs">
+                            <div class="date-range-item">
+                                <label for="template-start-date">Start Date</label>
+                                <input type="date" id="template-start-date" class="trip-date-input" required>
+                            </div>
+                            <span class="date-separator">to</span>
+                            <div class="date-range-item">
+                                <label for="template-end-date">End Date</label>
+                                <input type="date" id="template-end-date" class="trip-date-input" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-template" class="btn-secondary">Cancel</button>
+                        <button type="submit" id="save-template" class="btn-primary">Save Trip</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Event Detail Modal -->
+    <div id="event-detail-modal" class="modal hidden">
+        <div class="modal-overlay" data-close-modal></div>
+        <div class="modal-content modal-detail">
+            <div class="modal-header">
+                <span class="detail-category-badge" id="detail-category-badge">Category</span>
+                <button class="close-modal" id="close-detail-modal" data-close-modal>
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h2 id="detail-event-name">Event Name</h2>
+                <div class="detail-info">
+                    <div class="detail-item">
+                        <i data-lucide="map-pin" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Location</span>
+                            <p id="detail-location">Location</p>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <i data-lucide="clock" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Time</span>
+                            <p id="detail-time">Time</p>
+                        </div>
+                    </div>
+                    <div class="detail-item description">
+                        <i data-lucide="file-text" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Description</span>
+                            <p id="detail-description">Description</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="delete-detail-event" class="btn-danger">Delete</button>
+                <button type="button" id="edit-detail-event" class="btn-primary">Edit</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+</body>
+</html>
