@@ -140,7 +140,7 @@ function removeMarker(title) {
 }
 
 // Export functions
-window.Map = {
+window.MapModule = {
     initMap,
     addMarker,
     createPopupContent,

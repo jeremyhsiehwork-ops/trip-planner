@@ -194,6 +194,11 @@ function switchTripEditorPage(page) {
                 'settings': 'settings-page'
             };
             showFullPage(pageMap[page]);
+            
+            // Load expenses when navigating to track page
+            if (page === 'track' && window.ExpenseTracker) {
+                ExpenseTracker.loadExpenses();
+            }
             break;
     }
     

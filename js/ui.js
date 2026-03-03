@@ -487,6 +487,8 @@ function setupDateTimeDropdowns() {
     
     // Generate time options with 15-minute intervals
     function generateTimeOptions() {
+        if (!timeSelect) return; // Guard clause if element doesn't exist
+        
         timeSelect.innerHTML = '<option value="">Select Time</option>';
         for (let hour = 0; hour < 24; hour++) {
             for (let minute = 0; minute < 60; minute += 15) {

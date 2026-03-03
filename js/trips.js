@@ -23,7 +23,7 @@ function showTripPlannerView() {
     
     // Refresh map after showing planner
     setTimeout(() => {
-        Map.refreshMap();
+        MapModule.refreshMap();
     }, 100);
 }
 
@@ -132,8 +132,15 @@ function continueTrip(tripId) {
     // Show trip planner
     showTripPlanner();
     
+    // Trigger trip editor onboarding for first-time users
+    if (typeof Onboarding !== 'undefined' && !Storage.onboardingTripEditorCompleted) {
+        setTimeout(() => {
+            Onboarding.startTripEditorOnboarding();
+        }, 500);
+    }
+    
     // Clear existing markers
-    Map.clearMarkers();
+    MapModule.clearMarkers();
     
     // Update trip title
     updateTripTitle();
@@ -145,15 +152,15 @@ function continueTrip(tripId) {
     const events = Storage.events;
     events.forEach(event => {
         if (event.latLng) {
-            Map.addMarker(event.latLng, event.name, event.category);
+            MapModule.addMarker(event.latLng, event.name, event.category);
         }
     });
     
     // Center map on first event or default location
     if (events.length > 0 && events[0].latLng) {
-        Map.setMapView(events[0].latLng, 12);
+        MapModule.setMapView(events[0].latLng, 12);
     } else {
-        Map.setMapView([22.3193, 114.1694], 12);
+        MapModule.setMapView([22.3193, 114.1694], 12);
     }
     
     // Show empty state if no events
@@ -359,7 +366,7 @@ function createTripFromTemplate(templateId, tripName, startDate, endDate) {
     showTripPlanner();
     
     // Clear existing markers
-    Map.clearMarkers();
+    MapModule.clearMarkers();
     
     // Update trip title
     updateTripTitle();
@@ -371,15 +378,15 @@ function createTripFromTemplate(templateId, tripName, startDate, endDate) {
     const events = Storage.events;
     events.forEach(event => {
         if (event.latLng) {
-            Map.addMarker(event.latLng, event.name, event.category);
+            MapModule.addMarker(event.latLng, event.name, event.category);
         }
     });
     
     // Center map on first event or Toyama
     if (events.length > 0 && events[0].latLng) {
-        Map.setMapView(events[0].latLng, 10);
+        MapModule.setMapView(events[0].latLng, 10);
     } else {
-        Map.setMapView([36.6997, 137.2152], 10);
+        MapModule.setMapView([36.6997, 137.2152], 10);
     }
     
     // Update date dropdown
@@ -400,6 +407,13 @@ function createTripFromTemplate(templateId, tripName, startDate, endDate) {
             navItems.forEach(nav => nav.classList.remove('active'));
             navItems[0]?.classList.add('active'); // First item (Schedule)
         }
+    }
+    
+    // Trigger trip editor onboarding for first-time users
+    if (typeof Onboarding !== 'undefined' && !Storage.onboardingTripEditorCompleted) {
+        setTimeout(() => {
+            Onboarding.startTripEditorOnboarding();
+        }, 500);
     }
     
     // Refresh Lucide icons
@@ -484,7 +498,7 @@ function createCustomTrip(name, startDate, endDate) {
     
     // Clear existing events and markers
     Storage.events = [];
-    Map.clearMarkers();
+    MapModule.clearMarkers();
     
     // Update trip title with name and date range
     updateTripTitle();
@@ -494,7 +508,7 @@ function createCustomTrip(name, startDate, endDate) {
     Events.showEmptyState();
     
     // Center map on default location
-    Map.setMapView([22.3193, 114.1694], 12);
+    MapModule.setMapView([22.3193, 114.1694], 12);
     
     // Always switch to schedule page (first nav item)
     if (typeof Navigation !== 'undefined') {
@@ -506,6 +520,13 @@ function createCustomTrip(name, startDate, endDate) {
             navItems.forEach(nav => nav.classList.remove('active'));
             navItems[0]?.classList.add('active'); // First item (Schedule)
         }
+    }
+    
+    // Trigger trip editor onboarding for first-time users
+    if (typeof Onboarding !== 'undefined' && !Storage.onboardingTripEditorCompleted) {
+        setTimeout(() => {
+            Onboarding.startTripEditorOnboarding();
+        }, 500);
     }
 }
 
@@ -528,7 +549,7 @@ function selectTemplate(template) {
         Storage.currentTrip = currentTrip;
         showTripPlanner();
         loadTemplateEvents();
-        Map.setMapView([36.6997, 137.2152], 12);
+        MapModule.setMapView([36.6997, 137.2152], 12);
     } else if (template === 'custom') {
         let currentTrip = Storage.currentTrip;
         currentTrip = {
@@ -539,8 +560,8 @@ function selectTemplate(template) {
         Storage.currentTrip = currentTrip;
         showTripPlanner();
         Storage.events = [];
-        Map.clearMarkers();
-        Map.setMapView([22.3193, 114.1694], 12);
+        MapModule.clearMarkers();
+        MapModule.setMapView([22.3193, 114.1694], 12);
         Events.renderEvents();
         Events.showEmptyState();
     }
@@ -548,7 +569,7 @@ function selectTemplate(template) {
 
 // Load template events
 function loadTemplateEvents() {
-    Map.clearMarkers();
+    MapModule.clearMarkers();
     
     const currentTrip = Storage.currentTrip;
     Storage.events = [...currentTrip.events];
@@ -557,7 +578,7 @@ function loadTemplateEvents() {
     const events = Storage.events;
     events.forEach(event => {
         if (event.latLng) {
-            Map.addMarker(event.latLng, event.name, event.category);
+            MapModule.addMarker(event.latLng, event.name, event.category);
         }
     });
     

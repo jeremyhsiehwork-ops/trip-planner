@@ -105,7 +105,7 @@ function displaySearchResults(results) {
             const index = parseInt(item.dataset.index);
             const result = searchResults[index];
             if (result) {
-                Map.setMapView([result.lat, result.lng], 15);
+                MapModule.setMapView([result.lat, result.lng], 15);
                 searchResultsEl.classList.add('hidden');
                 document.getElementById('map-search-input').value = result.name;
                 

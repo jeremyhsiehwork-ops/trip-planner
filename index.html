@@ -37,9 +37,11 @@
     <script src="js/search.js" defer></script>
     <script src="js/map.js" defer></script>
     <script src="js/events.js" defer></script>
+    <script src="js/expenses.js" defer></script>
     <script src="js/trips.js" defer></script>
     <script src="js/ui.js" defer></script>
     <script src="js/checklist.js" defer></script>
+    <script src="js/onboarding.js" defer></script>
     <script src="navigation.js" defer></script>
     <script src="js/main.js" defer></script>
 </head>
@@ -222,18 +224,43 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- PAGE 4: Track (記賬) - Placeholder -->
+        <!-- PAGE 4: Track (記賬) - Expense Tracker -->
         <!-- ============================================ -->
         <div id="track-page" class="page-content hidden">
             <header class="page-header">
                 <h1>記賬</h1>
                 <p class="section-subtitle">Expense Tracker</p>
             </header>
-            <main class="placeholder-main">
-                <div class="placeholder-content">
-                    <i data-lucide="coins" class="placeholder-icon"></i>
-                    <h2>Coming Soon</h2>
-                    <p>Track your trip expenses</p>
+            <main class="track-main">
+                <!-- Summary Card -->
+                <div class="expense-summary-card">
+                    <div class="summary-total">
+                        <span class="summary-label">💰 Total Spent</span>
+                        <span class="summary-amount" id="total-spent">HKD $0.00</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-per-person">
+                        <span class="summary-label">👥 Per Person (<span id="person-count">2</span> people)</span>
+                        <span class="summary-amount" id="per-person">HKD $0.00</span>
+                    </div>
+                </div>
+                
+                <!-- Add Expense Button -->
+                <button id="add-expense-btn" class="add-expense-btn">
+                    <i data-lucide="plus"></i>
+                    <span>Add Expense</span>
+                </button>
+                
+                <!-- Expense List -->
+                <div class="expense-list-container">
+                    <div id="expense-list" class="expense-list">
+                        <!-- Empty State -->
+                        <div class="expense-empty-state" id="expense-empty-state">
+                            <i data-lucide="receipt" class="empty-icon"></i>
+                            <p>No expenses yet</p>
+                            <p class="empty-hint">Tap "+" to add your first expense</p>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
@@ -247,6 +274,75 @@
                 <p class="section-subtitle">Settings</p>
             </header>
             <main class="settings-main">
+                <!-- Expense Settings -->
+                <div class="settings-section expense-settings-section">
+                    <h3 class="settings-section-title">💰 Expense Settings</h3>
+                    
+                    <!-- Number of Persons -->
+                    <div class="expense-setting-item">
+                        <label class="setting-label">Number of Persons</label>
+                        <div class="persons-stepper">
+                            <button type="button" class="stepper-btn" id="persons-decrease">−</button>
+                            <span class="persons-count" id="persons-count-display">2</span>
+                            <button type="button" class="stepper-btn" id="persons-increase">+</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Person Names -->
+                    <div class="expense-setting-item">
+                        <label class="setting-label">Person Names</label>
+                        <div class="person-names-list" id="person-names-list">
+                            <!-- Person name inputs will be generated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Default Currency -->
+                    <div class="expense-setting-item">
+                        <label class="setting-label">Default Currency</label>
+                        <select id="default-currency-select" class="currency-select">
+                            <option value="JPY">JPY - Japanese Yen (¥)</option>
+                            <option value="HKD">HKD - Hong Kong Dollar ($)</option>
+                            <option value="TWD">TWD - Taiwan Dollar (NT$)</option>
+                            <option value="USD">USD - US Dollar ($)</option>
+                            <option value="EUR">EUR - Euro (€)</option>
+                            <option value="KRW">KRW - Korean Won (₩)</option>
+                            <option value="SGD">SGD - Singapore Dollar (S$)</option>
+                            <option value="THB">THB - Thai Baht (฿)</option>
+                            <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Exchange Rates -->
+                    <div class="expense-setting-item">
+                        <label class="setting-label">Exchange Rates (to HKD)</label>
+                        <div class="exchange-rates-list" id="exchange-rates-list">
+                            <!-- Exchange rate inputs will be generated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tutorial Settings -->
+                <div class="settings-section tutorial-section">
+                    <h3 class="settings-section-title tutorial-section-title">📚 Tutorial</h3>
+                    <div class="tutorial-buttons">
+                        <button class="tutorial-btn" id="show-landing-tutorial">
+                            <i data-lucide="home"></i>
+                            <div class="tutorial-btn-text">
+                                <span class="tutorial-btn-title">Landing Tutorial</span>
+                                <span class="tutorial-btn-desc">Learn the basics of the app</span>
+                            </div>
+                        </button>
+                        <button class="tutorial-btn" id="show-trip-editor-tutorial">
+                            <i data-lucide="map"></i>
+                            <div class="tutorial-btn-text">
+                                <span class="tutorial-btn-title">Trip Editor Tutorial</span>
+                                <span class="tutorial-btn-desc">Learn how to plan your trips</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Language Settings -->
                 <div class="settings-section">
                     <h3 class="settings-section-title">Language 言語</h3>
                     <div class="settings-options">
@@ -263,6 +359,7 @@
                     </div>
                 </div>
                 
+                <!-- Data Settings -->
                 <div class="settings-section">
                     <h3 class="settings-section-title">Data データ</h3>
                     <button id="clear-all-data" class="settings-danger-btn">
@@ -321,69 +418,202 @@
         </nav>
     </div>
     
-    <!-- Add/Edit Event Modal -->
+    <!-- Multi-Step Add Event Modal -->
     <div id="event-modal" class="modal hidden">
         <div class="modal-overlay" data-close-modal></div>
-        <div class="modal-content">
+        <div class="modal-content modal-wizard">
             <div class="modal-header">
+                <button class="wizard-back-btn hidden" id="wizard-back">
+                    <i data-lucide="arrow-left"></i>
+                </button>
                 <h3 id="modal-title">Add Event</h3>
                 <button class="close-modal" id="close-modal" data-close-modal>
                     <i data-lucide="x"></i>
                 </button>
             </div>
-            <form id="event-form">
-                <div class="form-group">
-                    <label for="event-name">
-                        <span class="required">*</span> Event Name
-                    </label>
-                    <input type="text" id="event-name" placeholder="Enter event name" required>
+            
+            <!-- Step Progress Indicator -->
+            <div class="wizard-progress">
+                <div class="wizard-progress-bar">
+                    <div class="wizard-progress-fill" id="wizard-progress-fill"></div>
                 </div>
-                <div class="form-group">
-                    <label for="event-location">
-                        <span class="required">*</span> Location
-                    </label>
-                    <input type="text" id="event-location" placeholder="Enter location" required>
+                <div class="wizard-steps">
+                    <span class="wizard-step active" data-step="1">1</span>
+                    <span class="wizard-step" data-step="2">2</span>
+                    <span class="wizard-step" data-step="3">3</span>
+                    <span class="wizard-step" data-step="4">4</span>
                 </div>
-                <div class="form-group datetime-group">
-                    <label>
-                        <span class="required">*</span> Date & Time
-                    </label>
-                    <div class="datetime-selects">
-                        <select id="event-date-select" class="datetime-select" required>
-                            <option value="">Select Date</option>
-                        </select>
-                        <select id="event-time-select" class="datetime-select" required>
-                            <option value="">Select Time</option>
-                        </select>
+            </div>
+            
+            <div class="wizard-content">
+                <!-- Step 1: Category Selection -->
+                <div class="wizard-step-content active" data-step="1">
+                    <div class="step-header">
+                        <h4>What type of event?</h4>
+                        <p>Select a category for your event</p>
+                    </div>
+                    <div class="category-grid" id="category-grid">
+                        <button class="category-card" data-category="hotel">
+                            <span class="category-icon">🏨</span>
+                            <span class="category-name">Hotel</span>
+                        </button>
+                        <button class="category-card" data-category="breakfast">
+                            <span class="category-icon">🍳</span>
+                            <span class="category-name">Breakfast</span>
+                        </button>
+                        <button class="category-card" data-category="lunch">
+                            <span class="category-icon">🍱</span>
+                            <span class="category-name">Lunch</span>
+                        </button>
+                        <button class="category-card" data-category="dinner">
+                            <span class="category-icon">🍛</span>
+                            <span class="category-name">Dinner</span>
+                        </button>
+                        <button class="category-card" data-category="view">
+                            <span class="category-icon">🏞️</span>
+                            <span class="category-name">View</span>
+                        </button>
+                        <button class="category-card" data-category="play">
+                            <span class="category-icon">🎡</span>
+                            <span class="category-name">Activity</span>
+                        </button>
+                        <button class="category-card" data-category="transportation">
+                            <span class="category-icon">🚌</span>
+                            <span class="category-name">Transport</span>
+                        </button>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="event-category">
-                        <span class="required">*</span> Category
-                    </label>
-                    <div class="select-wrapper">
-                        <select id="event-category" required>
-                            <option value="">Select Category</option>
-                            <option value="hotel">🏨 Hotel</option>
-                            <option value="breakfast">🍳 Breakfast</option>
-                            <option value="lunch">🍱 Lunch</option>
-                            <option value="dinner">🍛 Dinner</option>
-                            <option value="view">🏞️ View/Attraction</option>
-                            <option value="play">🎡 Activity/Play</option>
-                            <option value="transportation">🚌 Transportation</option>
-                        </select>
-                        <span class="select-arrow">▼</span>
+                
+                <!-- Step 2: Name & Location -->
+                <div class="wizard-step-content" data-step="2">
+                    <div class="step-header">
+                        <h4>Event Details</h4>
+                        <p>Enter the name and location</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-name">
+                            <span class="required">*</span> Event Name
+                        </label>
+                        <input type="text" id="event-name" placeholder="Enter event name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-location">
+                            <span class="required">*</span> Location
+                        </label>
+                        <div class="location-input-wrapper">
+                            <input type="text" id="event-location" placeholder="Search or tap on map..." required>
+                            <button type="button" id="use-map-location" class="location-map-btn" title="Pick from map">
+                                <i data-lucide="map-pin"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mini-map-container" id="mini-map-container">
+                        <div id="mini-map"></div>
+                        <div class="mini-map-hint">
+                            <i data-lucide="info"></i>
+                            <span>Tap on map to set location</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-description">Notes (optional)</label>
+                        <textarea id="event-description" placeholder="Add notes about this event"></textarea>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="event-description">Description</label>
-                    <textarea id="event-description" placeholder="Add notes about this event"></textarea>
+                
+                <!-- Step 3: Date & Time -->
+                <div class="wizard-step-content" data-step="3">
+                    <div class="step-header">
+                        <h4>When is this event?</h4>
+                        <p>Select date and time</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Date</label>
+                        <div class="date-scroller-container">
+                            <button class="date-scroller-btn date-scroller-left" id="date-scroll-left">
+                                <i data-lucide="chevron-left"></i>
+                            </button>
+                            <div class="date-scroller" id="date-scroller">
+                                <!-- Date buttons will be generated here -->
+                            </div>
+                            <button class="date-scroller-btn date-scroller-right" id="date-scroll-right">
+                                <i data-lucide="chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Time</label>
+                        <div class="time-picker-container">
+                            <div class="time-spinner-group">
+                                <button class="time-spinner-btn up" data-target="event-hour-up">
+                                    <i data-lucide="chevron-up"></i>
+                                </button>
+                                <div class="time-value" id="event-hour">09</div>
+                                <button class="time-spinner-btn down" data-target="event-hour-down">
+                                    <i data-lucide="chevron-down"></i>
+                                </button>
+                            </div>
+                            <span class="time-separator">:</span>
+                            <div class="time-spinner-group">
+                                <button class="time-spinner-btn up" data-target="event-minute-up">
+                                    <i data-lucide="chevron-up"></i>
+                                </button>
+                                <div class="time-value" id="event-minute">00</div>
+                                <button class="time-spinner-btn down" data-target="event-minute-down">
+                                    <i data-lucide="chevron-down"></i>
+                                </button>
+                            </div>
+                            <button class="time-ampm-btn" id="event-ampm">AM</button>
+                        </div>
+                        <div class="quick-time-buttons">
+                            <button class="quick-time-btn" data-time="09:00">Morning</button>
+                            <button class="quick-time-btn" data-time="12:00">Noon</button>
+                            <button class="quick-time-btn" data-time="15:00">Afternoon</button>
+                            <button class="quick-time-btn" data-time="18:00">Evening</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-actions">
-                    <button type="button" id="cancel-add" class="btn-secondary">Cancel</button>
-                    <button type="submit" id="confirm-add" class="btn-primary">Add Event</button>
+                
+                <!-- Step 4: Review & Confirm -->
+                <div class="wizard-step-content" data-step="4">
+                    <div class="step-header">
+                        <h4>Review Your Event</h4>
+                        <p>Make sure everything looks correct</p>
+                    </div>
+                    <div class="event-review-card" id="event-review-card">
+                        <div class="review-category-badge" id="review-category-badge">
+                            <span class="review-category-icon">🏨</span>
+                            <span class="review-category-name">Hotel</span>
+                        </div>
+                        <h3 class="review-event-name" id="review-event-name">Event Name</h3>
+                        <div class="review-details">
+                            <div class="review-item">
+                                <i data-lucide="map-pin"></i>
+                                <span id="review-location">Location</span>
+                            </div>
+                            <div class="review-item">
+                                <i data-lucide="calendar"></i>
+                                <span id="review-date">Date</span>
+                            </div>
+                            <div class="review-item">
+                                <i data-lucide="clock"></i>
+                                <span id="review-time">Time</span>
+                            </div>
+                        </div>
+                        <div class="review-notes" id="review-notes-container">
+                            <i data-lucide="file-text"></i>
+                            <span id="review-notes">Notes</span>
+                        </div>
+                        <div class="review-mini-map" id="review-mini-map"></div>
+                    </div>
                 </div>
-            </form>
+            </div>
+            
+            <!-- Wizard Footer -->
+            <div class="wizard-footer">
+                <button type="button" id="wizard-cancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="wizard-next" class="btn-primary">Next</button>
+                <button type="button" id="wizard-submit" class="btn-primary hidden">Add Event</button>
+            </div>
         </div>
     </div>
     
@@ -533,6 +763,296 @@
             <div class="modal-footer">
                 <button type="button" id="delete-detail-event" class="btn-danger">Delete</button>
                 <button type="button" id="edit-detail-event" class="btn-primary">Edit</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Multi-Step Add Expense Modal -->
+    <div id="expense-modal" class="modal hidden">
+        <div class="modal-overlay" data-close-expense-modal></div>
+        <div class="modal-content modal-wizard">
+            <div class="modal-header">
+                <button class="wizard-back-btn hidden" id="expense-wizard-back">
+                    <i data-lucide="arrow-left"></i>
+                </button>
+                <h3 id="expense-modal-title">Add Expense</h3>
+                <button class="close-modal" id="close-expense-modal" data-close-expense-modal>
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <!-- Step Progress Indicator -->
+            <div class="wizard-progress">
+                <div class="wizard-progress-bar">
+                    <div class="wizard-progress-fill" id="expense-progress-fill"></div>
+                </div>
+                <div class="wizard-steps">
+                    <span class="wizard-step active" data-step="1">1</span>
+                    <span class="wizard-step" data-step="2">2</span>
+                    <span class="wizard-step" data-step="3">3</span>
+                    <span class="wizard-step" data-step="4">4</span>
+                </div>
+            </div>
+            
+            <div class="wizard-content">
+                <!-- Step 1: Category Selection -->
+                <div class="wizard-step-content active" data-step="1">
+                    <div class="step-header">
+                        <h4>What did you spend on?</h4>
+                        <p>Select a category</p>
+                    </div>
+                    <div class="expense-category-grid" id="expense-category-grid">
+                        <button class="category-card" data-expense-category="transport">
+                            <span class="category-icon">🚗</span>
+                            <span class="category-name">Transport</span>
+                        </button>
+                        <button class="category-card" data-expense-category="meal">
+                            <span class="category-icon">🍽️</span>
+                            <span class="category-name">Meal</span>
+                        </button>
+                        <button class="category-card" data-expense-category="souvenir">
+                            <span class="category-icon">🎁</span>
+                            <span class="category-name">Souvenir</span>
+                        </button>
+                        <button class="category-card" data-expense-category="drink">
+                            <span class="category-icon">🍹</span>
+                            <span class="category-name">Drink</span>
+                        </button>
+                        <button class="category-card" data-expense-category="living">
+                            <span class="category-icon">🏨</span>
+                            <span class="category-name">Living</span>
+                        </button>
+                        <button class="category-card" data-expense-category="entertainment">
+                            <span class="category-icon">🎬</span>
+                            <span class="category-name">Entertainment</span>
+                        </button>
+                        <button class="category-card" data-expense-category="shopping">
+                            <span class="category-icon">🛍️</span>
+                            <span class="category-name">Shopping</span>
+                        </button>
+                        <button class="category-card" data-expense-category="others">
+                            <span class="category-icon">📦</span>
+                            <span class="category-name">Others</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Item & Amount -->
+                <div class="wizard-step-content" data-step="2">
+                    <div class="step-header">
+                        <h4>Enter the details</h4>
+                        <p>Item name and amount</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-item-name">
+                            <span class="required">*</span> Item Name
+                        </label>
+                        <input type="text" id="expense-item-name" placeholder="e.g., Lunch at Ramen Shop" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-amount">
+                            <span class="required">*</span> Amount
+                        </label>
+                        <div class="amount-input-wrapper">
+                            <span class="currency-symbol" id="expense-currency-symbol">¥</span>
+                            <input type="number" id="expense-amount" placeholder="0" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-currency">Currency</label>
+                        <select id="expense-currency" class="currency-select">
+                            <option value="JPY">JPY - Japanese Yen</option>
+                            <option value="HKD">HKD - Hong Kong Dollar</option>
+                            <option value="TWD">TWD - Taiwan Dollar</option>
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="KRW">KRW - Korean Won</option>
+                            <option value="SGD">SGD - Singapore Dollar</option>
+                            <option value="THB">THB - Thai Baht</option>
+                            <option value="CNY">CNY - Chinese Yuan</option>
+                        </select>
+                    </div>
+                    <div class="exchange-rate-display">
+                        <div class="rate-row">
+                            <span class="rate-label">Exchange Rate:</span>
+                            <input type="number" id="expense-exchange-rate" class="rate-input" step="0.0001" min="0">
+                            <span class="rate-hint">1 <span id="from-currency">JPY</span> = <span id="rate-value">0.053</span> HKD</span>
+                        </div>
+                        <div class="converted-amount">
+                            <span class="converted-label">≈ HKD</span>
+                            <span class="converted-value" id="expense-amount-hkd">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-linked-event">Link to Event (optional)</label>
+                        <select id="expense-linked-event" class="event-select">
+                            <option value="">No event</option>
+                            <!-- Events will be populated here -->
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Who Paid & When -->
+                <div class="wizard-step-content" data-step="3">
+                    <div class="step-header">
+                        <h4>Who paid?</h4>
+                        <p>Select payer(s) and date</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Paid by</label>
+                        <div class="payer-list" id="payer-list">
+                            <!-- Payers will be populated here -->
+                        </div>
+                        <div class="split-summary" id="split-summary">
+                            <!-- Split summary will show here -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Date</label>
+                        <div class="date-scroller-container">
+                            <button class="date-scroller-btn date-scroller-left" id="expense-date-scroll-left">
+                                <i data-lucide="chevron-left"></i>
+                            </button>
+                            <div class="date-scroller" id="expense-date-scroller">
+                                <!-- Date buttons will be generated here -->
+                            </div>
+                            <button class="date-scroller-btn date-scroller-right" id="expense-date-scroll-right">
+                                <i data-lucide="chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Time</label>
+                        <div class="time-picker-container">
+                            <div class="time-spinner-group">
+                                <button class="time-spinner-btn up" data-target="expense-hour-up">
+                                    <i data-lucide="chevron-up"></i>
+                                </button>
+                                <div class="time-value" id="expense-hour">12</div>
+                                <button class="time-spinner-btn down" data-target="expense-hour-down">
+                                    <i data-lucide="chevron-down"></i>
+                                </button>
+                            </div>
+                            <span class="time-separator">:</span>
+                            <div class="time-spinner-group">
+                                <button class="time-spinner-btn up" data-target="expense-minute-up">
+                                    <i data-lucide="chevron-up"></i>
+                                </button>
+                                <div class="time-value" id="expense-minute">00</div>
+                                <button class="time-spinner-btn down" data-target="expense-minute-down">
+                                    <i data-lucide="chevron-down"></i>
+                                </button>
+                            </div>
+                            <button class="time-ampm-btn" id="expense-ampm">PM</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-notes">Notes (optional)</label>
+                        <textarea id="expense-notes" placeholder="Add notes about this expense"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Step 4: Review & Confirm -->
+                <div class="wizard-step-content" data-step="4">
+                    <div class="step-header">
+                        <h4>Review expense</h4>
+                        <p>Make sure everything is correct</p>
+                    </div>
+                    <div class="expense-review-card" id="expense-review-card">
+                        <div class="review-expense-category-badge" id="review-expense-category-badge">
+                            <span class="review-category-icon">🍽️</span>
+                            <span class="review-category-name">Meal</span>
+                        </div>
+                        <h3 class="review-expense-item-name" id="review-expense-item-name">Item Name</h3>
+                        <div class="review-amount-display">
+                            <span class="review-original-amount" id="review-original-amount">¥1,000</span>
+                            <span class="review-converted-amount" id="review-converted-amount">≈ HKD $53.00</span>
+                        </div>
+                        <div class="review-details">
+                            <div class="review-item">
+                                <i data-lucide="users"></i>
+                                <span id="review-payers">Paid by: John, Mary</span>
+                            </div>
+                            <div class="review-item" id="review-date-container">
+                                <i data-lucide="calendar"></i>
+                                <span id="review-expense-date">Date</span>
+                            </div>
+                            <div class="review-item" id="review-linked-event-container">
+                                <i data-lucide="link"></i>
+                                <span id="review-linked-event">Linked Event</span>
+                            </div>
+                        </div>
+                        <div class="review-notes" id="review-expense-notes-container">
+                            <i data-lucide="file-text"></i>
+                            <span id="review-expense-notes">Notes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Wizard Footer -->
+            <div class="wizard-footer">
+                <button type="button" id="expense-wizard-cancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="expense-wizard-next" class="btn-primary">Next</button>
+                <button type="button" id="expense-wizard-submit" class="btn-primary hidden">Add Expense</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Expense Detail Modal -->
+    <div id="expense-detail-modal" class="modal hidden">
+        <div class="modal-overlay" data-close-expense-detail-modal></div>
+        <div class="modal-content modal-detail">
+            <div class="modal-header">
+                <span class="detail-expense-category-badge" id="detail-expense-category-badge">
+                    <span class="category-icon">🍽️</span>
+                    <span class="category-name">Meal</span>
+                </span>
+                <button class="close-modal" id="close-expense-detail-modal" data-close-expense-detail-modal>
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h2 id="detail-expense-item-name">Item Name</h2>
+                <div class="detail-amount-section">
+                    <div class="detail-original-amount" id="detail-original-amount">¥1,000</div>
+                    <div class="detail-converted-amount" id="detail-converted-amount">≈ HKD $53.00</div>
+                </div>
+                <div class="detail-info">
+                    <div class="detail-item">
+                        <i data-lucide="users" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Paid by</span>
+                            <p id="detail-payers">John, Mary</p>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <i data-lucide="calendar" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Date</span>
+                            <p id="detail-expense-date">Apr 1, 2024</p>
+                        </div>
+                    </div>
+                    <div class="detail-item" id="detail-linked-event-item">
+                        <i data-lucide="link" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Linked Event</span>
+                            <p id="detail-linked-event-name">Event Name</p>
+                            <button class="view-event-btn" id="view-linked-event-btn">View Event →</button>
+                        </div>
+                    </div>
+                    <div class="detail-item description" id="detail-expense-notes-item">
+                        <i data-lucide="file-text" class="detail-icon"></i>
+                        <div>
+                            <span class="detail-label">Notes</span>
+                            <p id="detail-expense-notes">Notes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="delete-expense" class="btn-danger">Delete</button>
+                <button type="button" id="edit-expense" class="btn-primary">Edit</button>
             </div>
         </div>
     </div>

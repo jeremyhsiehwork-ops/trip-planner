@@ -13,6 +13,20 @@ let currentTrip = {
 };
 let currentLang = 'en';
 
+// Onboarding completion flags
+let onboardingLandingCompleted = false;
+let onboardingTripEditorCompleted = false;
+
+// Global expense settings
+let expenseSettings = {
+    persons: ['Person 1', 'Person 2'],
+    defaultCurrency: 'JPY',
+    exchangeRates: { ...currencyOptions }
+};
+
+// Current trip expenses
+let expenses = [];
+
 // Load saved events from localStorage
 function loadEvents() {
     const savedEvents = localStorage.getItem('tripEvents');
@@ -90,11 +104,85 @@ function loadLanguage() {
     return localStorage.getItem('language');
 }
 
+// Load expense settings from localStorage
+function loadExpenseSettings() {
+    const saved = localStorage.getItem('expenseSettings');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        expenseSettings = { ...expenseSettings, ...parsed };
+    }
+    return expenseSettings;
+}
+
+// Save expense settings to localStorage
+function saveExpenseSettings() {
+    localStorage.setItem('expenseSettings', JSON.stringify(expenseSettings));
+}
+
+// Load expenses for current trip
+function loadExpenses() {
+    if (currentTrip.id) {
+        const saved = localStorage.getItem(`expenses_${currentTrip.id}`);
+        if (saved) {
+            expenses = JSON.parse(saved);
+        } else {
+            expenses = [];
+        }
+    } else {
+        expenses = [];
+    }
+    return expenses;
+}
+
+// Save expenses for current trip
+function saveExpenses() {
+    if (currentTrip.id) {
+        localStorage.setItem(`expenses_${currentTrip.id}`, JSON.stringify(expenses));
+    }
+}
+
+// Add a new expense
+function addExpense(expense) {
+    expense.id = 'exp_' + Date.now();
+    expense.createdAt = new Date().toISOString();
+    expenses.push(expense);
+    saveExpenses();
+    return expense;
+}
+
+// Update an existing expense
+function updateExpense(id, updates) {
+    const index = expenses.findIndex(e => e.id === id);
+    if (index !== -1) {
+        expenses[index] = { ...expenses[index], ...updates };
+        saveExpenses();
+        return expenses[index];
+    }
+    return null;
+}
+
+// Delete an expense
+function deleteExpense(id) {
+    const index = expenses.findIndex(e => e.id === id);
+    if (index !== -1) {
+        expenses.splice(index, 1);
+        saveExpenses();
+        return true;
+    }
+    return false;
+}
+
+// Get expense by ID
+function getExpenseById(id) {
+    return expenses.find(e => e.id === id);
+}
+
 // Clear all data
 function clearAllData() {
     localStorage.clear();
     savedTrips = [];
     events = [];
+    expenses = [];
     currentTrip = {
         id: null,
         name: 'My Trip',
@@ -102,6 +190,11 @@ function clearAllData() {
         startDate: null,
         endDate: null,
         events: []
+    };
+    expenseSettings = {
+        persons: ['Person 1', 'Person 2'],
+        defaultCurrency: 'JPY',
+        exchangeRates: { ...currencyOptions }
     };
 }
 
@@ -115,11 +208,27 @@ window.Storage = {
     set currentTrip(val) { currentTrip = val; },
     get currentLang() { return currentLang; },
     set currentLang(val) { currentLang = val; },
+    get expenseSettings() { return expenseSettings; },
+    set expenseSettings(val) { expenseSettings = val; },
+    get expenses() { return expenses; },
+    set expenses(val) { expenses = val; },
+    get onboardingLandingCompleted() { return onboardingLandingCompleted; },
+    set onboardingLandingCompleted(val) { onboardingLandingCompleted = val; },
+    get onboardingTripEditorCompleted() { return onboardingTripEditorCompleted; },
+    set onboardingTripEditorCompleted(val) { onboardingTripEditorCompleted = val; },
     loadEvents,
     saveEvents,
     saveTrips,
     loadSavedTrips,
     saveLanguage,
     loadLanguage,
-    clearAllData
+    clearAllData,
+    loadExpenseSettings,
+    saveExpenseSettings,
+    loadExpenses,
+    saveExpenses,
+    addExpense,
+    updateExpense,
+    deleteExpense,
+    getExpenseById
 };

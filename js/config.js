@@ -1,4 +1,31 @@
 // Configuration and Constants
+
+// Expense Categories
+const expenseCategories = {
+    transport: { color: '#7BA3A8', icon: '🚗' },
+    meal: { color: '#C4A35A', icon: '🍽️' },
+    souvenir: { color: '#B87A7A', icon: '🎁' },
+    drink: { color: '#8B7BA8', icon: '🍹' },
+    living: { color: '#6B8E6B', icon: '🏨' },
+    entertainment: { color: '#C49A6C', icon: '🎬' },
+    shopping: { color: '#9B6B9B', icon: '🛍️' },
+    others: { color: '#8E8E93', icon: '📦' }
+};
+
+// Currency Options
+const currencyOptions = {
+    HKD: { symbol: '$', name: 'Hong Kong Dollar', rate: 1 },
+    JPY: { symbol: '¥', name: 'Japanese Yen', rate: 0.053 },
+    TWD: { symbol: 'NT$', name: 'Taiwan Dollar', rate: 0.25 },
+    USD: { symbol: '$', name: 'US Dollar', rate: 7.80 },
+    EUR: { symbol: '€', name: 'Euro', rate: 8.50 },
+    KRW: { symbol: '₩', name: 'Korean Won', rate: 0.0059 },
+    SGD: { symbol: 'S$', name: 'Singapore Dollar', rate: 5.80 },
+    THB: { symbol: '฿', name: 'Thai Baht', rate: 0.22 },
+    CNY: { symbol: '¥', name: 'Chinese Yuan', rate: 1.08 }
+};
+
+// Event Categories (existing)
 const eventCategories = {
     hotel: { color: '#28a745', icon: '🏨' },
     breakfast: { color: '#ffc107', icon: '🍳' },
@@ -144,7 +171,94 @@ const translations = {
         // Checklist
         itemsPacked: "items packed",
         addItem: "Add Item",
-        enterItemName: "Enter item name"
+        enterItemName: "Enter item name",
+        
+        // Wizard Steps
+        wizardStep1Title: "What type of event?",
+        wizardStep1Subtitle: "Select a category for your event",
+        wizardStep2Title: "Event Details",
+        wizardStep2Subtitle: "Enter the name and location",
+        wizardStep3Title: "When is this event?",
+        wizardStep3Subtitle: "Select date and time",
+        wizardStep4Title: "Review Your Event",
+        wizardStep4Subtitle: "Make sure everything looks correct",
+        
+        // Time Picker
+        morning: "Morning",
+        noon: "Noon",
+        afternoon: "Afternoon",
+        evening: "Evening",
+        
+        // Form Labels
+        notesOptional: "Notes (optional)",
+        tapMapToSetLocation: "Tap on map to set location",
+        
+        // Validation Messages
+        selectCategory: "Please select a category",
+        enterEventName: "Please enter an event name",
+        enterLocation: "Please enter a location",
+        selectDate: "Please select a date",
+        
+        // Expense Tracker
+        expenseTracker: "Expense Tracker",
+        totalSpent: "Total Spent",
+        perPerson: "Per Person",
+        people: "people",
+        addExpense: "Add Expense",
+        noExpenses: "No expenses yet",
+        noExpensesHint: "Tap \"+\" to add your first expense",
+        
+        // Expense Categories
+        expTransport: "Transport",
+        expMeal: "Meal",
+        expSouvenir: "Souvenir",
+        expDrink: "Drink",
+        expLiving: "Living",
+        expEntertainment: "Entertainment",
+        expShopping: "Shopping",
+        expOthers: "Others",
+        
+        // Expense Wizard
+        expStep1Title: "What did you spend on?",
+        expStep1Subtitle: "Select a category",
+        expStep2Title: "Enter the details",
+        expStep2Subtitle: "Item name and amount",
+        expStep3Title: "Who paid?",
+        expStep3Subtitle: "Select payer(s) and date",
+        expStep4Title: "Review expense",
+        expStep4Subtitle: "Make sure everything is correct",
+        
+        // Expense Form
+        itemName: "Item Name",
+        amount: "Amount",
+        currency: "Currency",
+        exchangeRate: "Exchange Rate",
+        equalsHKD: "equals HKD",
+        linkToEvent: "Link to Event (optional)",
+        noEvent: "No event",
+        paidBy: "Paid by",
+        split: "Split",
+        dateOptional: "Date (optional)",
+        timeOptional: "Time (optional)",
+        notesOptional: "Notes (optional)",
+        
+        // Expense Detail
+        linkedEvent: "Linked Event",
+        viewLinkedEvent: "View Event",
+        
+        // Settings - Expense
+        expenseSettings: "Expense Settings",
+        numberOfPersons: "Number of Persons",
+        defaultCurrency: "Default Currency",
+        exchangeRates: "Exchange Rates (to HKD)",
+        persons: "Persons",
+        addPerson: "Add Person",
+        editRate: "Edit rate",
+        
+        // Validation
+        enterItemName: "Please enter item name",
+        enterAmount: "Please enter amount",
+        selectPayer: "Please select at least one payer"
     },
     'zh-TW': {
         // Navigation
@@ -279,7 +393,94 @@ const translations = {
         // Checklist
         itemsPacked: "項目已打包",
         addItem: "新增項目",
-        enterItemName: "輸入項目名稱"
+        enterItemName: "輸入項目名稱",
+        
+        // Wizard Steps
+        wizardStep1Title: "什麼類型的活動？",
+        wizardStep1Subtitle: "選擇活動類別",
+        wizardStep2Title: "活動詳情",
+        wizardStep2Subtitle: "輸入名稱和地點",
+        wizardStep3Title: "活動時間？",
+        wizardStep3Subtitle: "選擇日期和時間",
+        wizardStep4Title: "確認活動內容",
+        wizardStep4Subtitle: "確認所有資訊正確",
+        
+        // Time Picker
+        morning: "早上",
+        noon: "中午",
+        afternoon: "下午",
+        evening: "晚上",
+        
+        // Form Labels
+        notesOptional: "備註（選填）",
+        tapMapToSetLocation: "點擊地圖設定位置",
+        
+        // Validation Messages
+        selectCategory: "請選擇類別",
+        enterEventName: "請輸入活動名稱",
+        enterLocation: "請輸入地點",
+        selectDate: "請選擇日期",
+        
+        // Expense Tracker
+        expenseTracker: "費用追蹤",
+        totalSpent: "總支出",
+        perPerson: "每人",
+        people: "人",
+        addExpense: "新增支出",
+        noExpenses: "尚無支出記錄",
+        noExpensesHint: "點擊「+」新增第一筆支出",
+        
+        // Expense Categories
+        expTransport: "交通",
+        expMeal: "餐飲",
+        expSouvenir: "紀念品",
+        expDrink: "飲料",
+        expLiving: "住宿",
+        expEntertainment: "娛樂",
+        expShopping: "購物",
+        expOthers: "其他",
+        
+        // Expense Wizard
+        expStep1Title: "這是什麼支出？",
+        expStep1Subtitle: "選擇類別",
+        expStep2Title: "輸入詳情",
+        expStep2Subtitle: "項目名稱和金額",
+        expStep3Title: "誰付款？",
+        expStep3Subtitle: "選擇付款人和日期",
+        expStep4Title: "確認支出",
+        expStep4Subtitle: "確認所有資訊正確",
+        
+        // Expense Form
+        itemName: "項目名稱",
+        amount: "金額",
+        currency: "貨幣",
+        exchangeRate: "匯率",
+        equalsHKD: "等於港幣",
+        linkToEvent: "連結活動（選填）",
+        noEvent: "無活動",
+        paidBy: "付款人",
+        split: "分攤",
+        dateOptional: "日期（選填）",
+        timeOptional: "時間（選填）",
+        notesOptional: "備註（選填）",
+        
+        // Expense Detail
+        linkedEvent: "相關活動",
+        viewLinkedEvent: "查看活動",
+        
+        // Settings - Expense
+        expenseSettings: "支出設定",
+        numberOfPersons: "人數",
+        defaultCurrency: "預設貨幣",
+        exchangeRates: "匯率（對港幣）",
+        persons: "人員",
+        addPerson: "新增人員",
+        editRate: "編輯匯率",
+        
+        // Validation
+        enterItemName: "請輸入項目名稱",
+        enterAmount: "請輸入金額",
+        selectPayer: "請選擇至少一位付款人"
     }
 };
 
