@@ -447,6 +447,42 @@ body {
     border-radius: 50%;
 }
 
+/* Header Actions Container */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Header Refresh Button */
+.header-refresh-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: var(--color-surface);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+}
+
+.header-refresh-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.header-refresh-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.header-refresh-btn:active svg {
+    transform: rotate(360deg);
+    transition: transform 0.5s ease;
+}
+
 /* Planner Main Layout */
 .planner-main {
     display: flex;
@@ -566,6 +602,32 @@ body {
 
 .map-search-btn:hover {
     background: var(--color-bg);
+}
+
+.map-refresh-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.map-refresh-btn svg {
+    width: 20px;
+    height: 20px;
+    stroke: var(--color-text);
+}
+
+.map-refresh-btn:hover {
+    background: var(--color-bg);
+    transform: rotate(180deg);
 }
 
 /* Search Results */

@@ -94,6 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Map toggle button
     setupMapToggle();
+    
+    // Map refresh button
+    setupMapRefresh();
 });
 
 // Initialize expense settings functionality
@@ -259,6 +262,36 @@ function setupMapToggle() {
                 }, 300);
             }
         });
+    }
+}
+
+// Setup map refresh button
+function setupMapRefresh() {
+    const mapRefreshBtn = document.getElementById('map-refresh-btn');
+    const headerRefreshBtn = document.getElementById('header-refresh-btn');
+    
+    // Refresh function used by both buttons
+    const refreshMap = (btn) => {
+        if (!btn) return;
+        
+        // Add rotation animation
+        btn.style.transform = 'rotate(360deg)';
+        setTimeout(() => {
+            btn.style.transform = '';
+        }, 500);
+        
+        // Refresh the map
+        if (MapModule && MapModule.refreshMap) {
+            MapModule.refreshMap();
+        }
+    };
+    
+    if (mapRefreshBtn) {
+        mapRefreshBtn.addEventListener('click', () => refreshMap(mapRefreshBtn));
+    }
+    
+    if (headerRefreshBtn) {
+        headerRefreshBtn.addEventListener('click', () => refreshMap(headerRefreshBtn));
     }
 }
 
