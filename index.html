@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Trip Planner</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#707070">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TripPlanner">
+    <link rel="manifest" href="manifest.json">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -42,6 +48,10 @@
     <script src="js/ui.js" defer></script>
     <script src="js/checklist.js" defer></script>
     <script src="js/onboarding.js" defer></script>
+    <script src="js/pwa.js" defer></script>
+    <script src="js/theme.js" defer></script>
+    <script src="js/share.js" defer></script>
+    <script src="js/timeline.js" defer></script>
     <script src="navigation.js" defer></script>
     <script src="js/main.js" defer></script>
 </head>
@@ -112,9 +122,6 @@
                     <div id="map-container">
                         <div id="map"></div>
                     </div>
-                        <button id="map-toggle-btn" class="map-toggle-btn" title="Collapse Map">
-                            <i data-lucide="chevron-up"></i>
-                        </button>
                     </section>
                     
                     <!-- Events List Section -->
@@ -131,25 +138,40 @@
                         
                         <!-- Collapsible Filters -->
                         <div id="filters-panel" class="filters-panel collapsed">
+                            <!-- Date Filter Row -->
                             <div class="filters-row">
-                                <div class="filter-item">
-                                    <label for="date-filter-select">Date</label>
-                                    <select id="date-filter-select" class="filter-select">
-                                        <option value="">All Dates</option>
-                                    </select>
+                                <div class="filter-item filter-date-full">
+                                    <label>Date Filter</label>
+                                    <div class="date-scroller-container">
+                                        <button class="date-scroller-btn date-scroller-left" id="filter-date-scroll-left">
+                                            <i data-lucide="chevron-left"></i>
+                                        </button>
+                                        <div class="date-scroller" id="filter-date-scroller">
+                                            <button class="date-btn selected" data-filter-date="">All</button>
+                                            <!-- Date buttons will be generated here -->
+                                        </div>
+                                        <button class="date-scroller-btn date-scroller-right" id="filter-date-scroll-right">
+                                            <i data-lucide="chevron-right"></i>
+                                        </button>
+                                    </div>
                                 </div>
+                            </div>
+                            <!-- Category Filter Row -->
+                            <div class="filters-row" style="margin-top: 12px;">
                                 <div class="filter-item">
                                     <label for="category-filter-select">Category</label>
-                                    <select id="category-filter-select" class="filter-select">
-                                        <option value="">All Categories</option>
-                                        <option value="hotel">Hotel</option>
-                                        <option value="breakfast">Breakfast</option>
-                                        <option value="lunch">Lunch</option>
-                                        <option value="dinner">Dinner</option>
-                                        <option value="view">View/Attraction</option>
-                                        <option value="play">Activity/Play</option>
-                                        <option value="transportation">Transportation</option>
-                                    </select>
+<select id="category-filter-select" class="filter-select">
+    <option value="">All Categories</option>
+    <option value="hotel">Hotel</option>
+    <option value="breakfast">Breakfast</option>
+    <option value="lunch">Lunch</option>
+    <option value="dinner">Dinner</option>
+    <option value="view">View/Attraction</option>
+    <option value="play">Activity/Play</option>
+    <option value="transportation">Transportation</option>
+    <option value="event">Event</option>
+    <option value="shopping">Shopping</option>
+</select>
                                 </div>
                             </div>
                         </div>
@@ -162,6 +184,67 @@
                             </div>
                         </div>
                     </section>
+                    
+                    <!-- Mobile Event List Panel (slides up from bottom of map) -->
+                    <div id="mobile-events-panel" class="mobile-events-panel">
+                        <div class="mobile-events-panel-header" id="mobile-events-panel-header">
+                            <div class="panel-handle">
+                                <div class="handle-bar"></div>
+                            </div>
+                            <h3>Schedule</h3>
+                            <button class="panel-close" id="mobile-events-panel-close">
+                                <i data-lucide="chevron-down"></i>
+                            </button>
+                        </div>
+                        <!-- Mobile Filter Controls -->
+                        <div class="mobile-filters-panel">
+                            <div class="mobile-filter-row">
+                                <div class="mobile-filter-item">
+                                    <label>Date Filter</label>
+                                    <div class="date-scroller-container">
+                                        <button class="date-scroller-btn date-scroller-left" id="mobile-filter-date-scroll-left">
+                                            <i data-lucide="chevron-left"></i>
+                                        </button>
+                                        <div class="date-scroller" id="mobile-filter-date-scroller">
+                                            <button class="date-btn selected" data-filter-date="">All</button>
+                                            <!-- Date buttons will be generated here -->
+                                        </div>
+                                        <button class="date-scroller-btn date-scroller-right" id="mobile-filter-date-scroll-right">
+                                            <i data-lucide="chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mobile-filter-row" style="margin-top: 8px;">
+                                <div class="mobile-filter-item">
+                                    <label for="mobile-category-filter-select">Category</label>
+                                    <select id="mobile-category-filter-select" class="filter-select">
+                                        <option value="">All Categories</option>
+                                        <option value="hotel">Hotel</option>
+                                        <option value="breakfast">Breakfast</option>
+                                        <option value="lunch">Lunch</option>
+                                        <option value="dinner">Dinner</option>
+                                        <option value="view">View/Attraction</option>
+                                        <option value="play">Activity/Play</option>
+                                        <option value="transportation">Transportation</option>
+                                        <option value="event">Event</option>
+                                        <option value="shopping">Shopping</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mobile-events-panel-content">
+                            <div id="mobile-events-list" class="mobile-events-list">
+                                <!-- Events will be populated here by renderEvents() -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Event Toggle Button (floating on map) -->
+                    <button id="mobile-event-fab" class="mobile-event-fab" title="Toggle Events">
+                        <i data-lucide="list"></i>
+                        <span class="event-count-badge" id="mobile-event-count">0</span>
+                    </button>
                 </main>
             </div>
         </div>
@@ -367,6 +450,27 @@
                     </div>
                 </div>
                 
+                <!-- Import/Export Settings -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">📤 Import/Export</h3>
+                    <div class="import-export-buttons">
+                        <button id="export-trip-btn" class="import-export-btn">
+                            <i data-lucide="download"></i>
+                            <div class="import-export-btn-text">
+                                <span class="import-export-btn-title">Export Trip</span>
+                                <span class="import-export-btn-desc">Download trip data as JSON file</span>
+                            </div>
+                        </button>
+                        <button id="import-trip-btn" class="import-export-btn">
+                            <i data-lucide="upload"></i>
+                            <div class="import-export-btn-text">
+                                <span class="import-export-btn-title">Import Trip</span>
+                                <span class="import-export-btn-desc">Import from JSON file or itinerary text</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Data Settings -->
                 <div class="settings-section">
                     <h3 class="settings-section-title">Data データ</h3>
@@ -489,6 +593,14 @@
                             <span class="category-icon">🚌</span>
                             <span class="category-name">Transport</span>
                         </button>
+                        <button class="category-card" data-category="event">
+                            <span class="category-icon">🎉</span>
+                            <span class="category-name">Event</span>
+                        </button>
+                        <button class="category-card" data-category="shopping">
+                            <span class="category-icon">🛍️</span>
+                            <span class="category-name">Shopping</span>
+                        </button>
                     </div>
                 </div>
                 
@@ -505,13 +617,31 @@
                         <input type="text" id="event-name" placeholder="Enter event name" required>
                     </div>
                     <div class="form-group">
-                        <label for="event-location">
-                            <span class="required">*</span> Location
+                        <label for="event-venue">
+                            <span class="required">*</span> Venue
+                        </label>
+                        <input type="text" id="event-venue" placeholder="Enter venue name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-venue-search">
+                            <span class="required">*</span> Search Venue
                         </label>
                         <div class="location-input-wrapper">
-                            <input type="text" id="event-location" placeholder="Search or tap on map..." required>
-                            <button type="button" id="use-map-location" class="location-map-btn" title="Pick from map">
-                                <i data-lucide="map-pin"></i>
+                            <input type="text" id="event-venue-search" placeholder="Search venue name...">
+                            <button type="button" id="search-venue-btn" class="location-map-btn" title="Search venue">
+                                <i data-lucide="search"></i>
+                            </button>
+                        </div>
+                        <div id="venue-search-results" class="venue-search-results hidden"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-location">
+                            Location (Coordinates)
+                        </label>
+                        <div class="location-input-wrapper">
+                            <input type="text" id="event-location" placeholder="Tap on map to pick location..." readonly>
+                            <button type="button" id="mini-map-refresh" class="location-map-btn" title="Center on events">
+                                <i data-lucide="refresh-cw"></i>
                             </button>
                         </div>
                     </div>
@@ -521,6 +651,18 @@
                             <i data-lucide="info"></i>
                             <span>Tap on map to set location</span>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-target">Target (optional)</label>
+                        <textarea id="event-target" placeholder="Enter target (e.g., 必食，必玩，必睇)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-target-link">Reference Link (optional)</label>
+                        <input type="url" id="event-target-link" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-preparation">Preparation (optional)</label>
+                        <textarea id="event-preparation" placeholder="Enter preparation notes (markdown supported)..."></textarea>
                     </div>
                     <div class="form-group">
                         <label for="event-description">Notes (optional)</label>
@@ -596,7 +738,11 @@
                         <div class="review-details">
                             <div class="review-item">
                                 <i data-lucide="map-pin"></i>
-                                <span id="review-location">Location</span>
+                                <span id="review-location">Venue</span>
+                            </div>
+                            <div class="review-item" id="review-target-container">
+                                <i data-lucide="target"></i>
+                                <span id="review-target">Target</span>
                             </div>
                             <div class="review-item">
                                 <i data-lucide="calendar"></i>
@@ -747,23 +893,50 @@
                 <div class="detail-info">
                     <div class="detail-item">
                         <i data-lucide="map-pin" class="detail-icon"></i>
-                        <div>
-                            <span class="detail-label">Location</span>
-                            <p id="detail-location">Location</p>
+                        <div style="flex: 1;">
+                            <span class="detail-label">Venue</span>
+                            <p id="detail-venue">Venue</p>
                         </div>
                     </div>
                     <div class="detail-item">
                         <i data-lucide="clock" class="detail-icon"></i>
-                        <div>
-                            <span class="detail-label">Time</span>
+                        <div style="flex: 1;">
+                            <span class="detail-label">Date & Time</span>
                             <p id="detail-time">Time</p>
                         </div>
                     </div>
-                    <div class="detail-item description">
+                    <div class="detail-item" id="detail-target-item">
+                        <i data-lucide="target" class="detail-icon"></i>
+                        <div style="flex: 1;">
+                            <span class="detail-label">Target</span>
+                            <p id="detail-target">Target</p>
+                            <a href="#" id="detail-target-link" class="target-link" target="_blank" rel="noopener noreferrer">
+                                <i data-lucide="external-link"></i> <span id="detail-target-link-text">View Reference</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="detail-item" id="detail-description-item">
                         <i data-lucide="file-text" class="detail-icon"></i>
-                        <div>
+                        <div style="flex: 1;">
                             <span class="detail-label">Description</span>
                             <p id="detail-description">Description</p>
+                        </div>
+                    </div>
+                    <div class="detail-item" id="detail-preparation-item">
+                        <i data-lucide="clipboard-list" class="detail-icon"></i>
+                        <div style="flex: 1;">
+                            <span class="detail-label">Preparation</span>
+                            <p id="detail-preparation" class="preparation-text">Preparation</p>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <i data-lucide="navigation" class="detail-icon"></i>
+                        <div style="flex: 1;">
+                            <span class="detail-label">Location</span>
+                            <p id="detail-location">Location</p>
+                            <a href="#" id="detail-google-maps-link" class="google-maps-link" target="_blank" rel="noopener noreferrer">
+                                <i data-lucide="external-link"></i> <span id="detail-google-maps-text">Open in Google Maps</span>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1065,9 +1238,144 @@
         </div>
     </div>
     
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-import">
+            <div class="modal-header">
+                <h3>Import Trip</h3>
+                <button class="close-modal" id="close-import-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="import-tabs">
+                <button class="import-tab active" id="import-tab-file">
+                    <i data-lucide="file-up"></i>
+                    <span>From File</span>
+                </button>
+                <button class="import-tab" id="import-tab-text">
+                    <i data-lucide="file-text"></i>
+                    <span>From Text</span>
+                </button>
+            </div>
+            <div class="import-content">
+                <!-- File Import Content -->
+                <div id="import-file-content" class="import-file-content">
+                    <div class="file-upload-area">
+                        <i data-lucide="upload-cloud" class="upload-icon"></i>
+                        <p class="upload-title">Upload JSON file</p>
+                        <p class="upload-desc">Select a trip export file to import</p>
+                        <input type="file" id="import-file-input" accept=".json" class="file-input" style="display: none;">
+                        <button class="btn-primary" id="import-file-btn">Select File</button>
+                    </div>
+                </div>
+                <!-- Text Import Content -->
+                <div id="import-text-content" class="import-text-content hidden">
+                    <div class="text-input-area">
+                        <div class="import-trip-settings">
+                            <h4>Trip Settings (Optional)</h4>
+                            <div class="form-group">
+                                <label for="import-trip-name">Trip Name</label>
+                                <input type="text" id="import-trip-name" class="import-trip-name-input" placeholder="Enter trip name (e.g., Hokuriku Spring Trip)">
+                            </div>
+                            <div class="form-group">
+                                <label>Trip Period</label>
+                                <div class="trip-date-range-inputs">
+                                    <div class="date-range-item">
+                                        <label for="import-start-date">Start Date</label>
+                                        <input type="date" id="import-start-date" class="trip-date-input">
+                                    </div>
+                                    <span class="date-separator">to</span>
+                                    <div class="date-range-item">
+                                        <label for="import-end-date">End Date</label>
+                                        <input type="date" id="import-end-date" class="trip-date-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-input-section">
+                            <label for="import-text-input">Paste Itinerary Text</label>
+                            <textarea id="import-text-input" class="import-text-input" placeholder="Paste your itinerary table here...
+
+Example format:
+Date	Day	Time	Location	Transport	Target	Hotel	經度	緯度
+4/9	三	14:35	抵達小松機場	機場巴士		富山站前大和 ROYNET 酒店	136.4069	36.3856"></textarea>
+                            <p class="text-hint">Supports tab-separated itinerary format with columns: Date, Day, Time, Location, Transport, Target, Hotel, Longitude, Latitude</p>
+                        </div>
+                        <button class="btn-primary" id="import-text-btn">Parse & Preview</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="import-cancel" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Import Preview Modal -->
+    <div id="import-preview-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-import-preview">
+            <div class="modal-header">
+                <h3>Preview Import</h3>
+                <button class="close-modal" id="close-preview-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="preview-content">
+                <div class="preview-trip-info">
+                    <h4 id="preview-trip-name">Imported Trip</h4>
+                    <p class="preview-dates" id="preview-trip-dates">Date range</p>
+                    <p class="preview-count" id="preview-event-count">0 events</p>
+                </div>
+                <div class="preview-events-list" id="preview-events-list">
+                    <!-- Events will be populated here -->
+                </div>
+                <div class="preview-hint">
+                    <i data-lucide="info"></i>
+                    <span>Events will be added to your current trip. Duplicate events (same name and time) will be skipped.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancel-preview-btn" class="btn-secondary">Cancel</button>
+                <button type="button" id="confirm-import-btn" class="btn-primary">Confirm Import</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
+    <!-- Import/Export Module -->
+    <script src="js/importExport.js" defer></script>
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Register service worker for PWA support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('SW registered:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New content available
+                                    if (window.UpdateChecker) {
+                                        window.UpdateChecker.showUpdateNotification();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.log('SW registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

@@ -168,6 +168,9 @@ function continueTrip(tripId) {
         Events.showEmptyState();
     }
     
+    // Dispatch event for filter date update
+    document.dispatchEvent(new CustomEvent('trip-loaded'));
+    
     // Always switch to schedule page (first nav item)
     if (typeof Navigation !== 'undefined') {
         Navigation.switchTripEditorPage('schedule-editor');

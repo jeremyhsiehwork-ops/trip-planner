@@ -378,9 +378,125 @@ function setupSettingsPage() {
     });
 }
 
-// Setup date filter
+// Format dates display for filter events (compact format)
+function formatFilterEventDates(dates) {
+    if (!dates || dates.length === 0) return '';
+    
+    if (dates.length === 1) {
+        // Single date - show full format
+        const date = new Date(dates[0]);
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = dayNames[date.getDay()];
+        return `${dayName}, ${date.toLocaleString(Storage.currentLang === 'zh-TW' ? 'zh-TW' : 'en-US', {
+            month: 'short',
+            day: 'numeric'
+        })}`;
+    }
+    
+    // Multiple dates - group by month for compact display
+    const monthEvents = {};
+    dates.forEach(dateStr => {
+        const date = new Date(dateStr);
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const day = date.getDate();
+        if (!monthEvents[month]) monthEvents[month] = [];
+        monthEvents[month].push(day);
+    });
+    
+    // Build display string
+    const parts = Object.entries(monthEvents).map(([month, days]) => {
+        return `${month} ${days.join(',')}`;
+    });
+    return parts.join(' | ');
+}
+
+// Setup date filter with horizontal scroller
 function setupDateFilter() {
-    document.getElementById('date-filter-select').addEventListener('change', filterEventsByDate);
+    // Generate date buttons for filter scroller
+    const filterDateScroller = document.getElementById('filter-date-scroller');
+    const leftScrollBtn = document.getElementById('filter-date-scroll-left');
+    const rightScrollBtn = document.getElementById('filter-date-scroll-right');
+    
+    if (!filterDateScroller) return;
+    
+    // Setup scroll buttons
+    if (leftScrollBtn) {
+        leftScrollBtn.addEventListener('click', () => scrollFilterDates(-1));
+    }
+    if (rightScrollBtn) {
+        rightScrollBtn.addEventListener('click', () => scrollFilterDates(1));
+    }
+    
+    // Generate date buttons from trip dates
+    generateFilterDateButtons();
+}
+
+// Generate filter date buttons based on trip dates
+function generateFilterDateButtons() {
+    const filterDateScroller = document.getElementById('filter-date-scroller');
+    if (!filterDateScroller) return;
+    
+    // Keep the "All" button with click handler
+    filterDateScroller.innerHTML = '<button class="date-btn selected" data-filter-date="">All</button>';
+    
+    // Add click handler to "All" button
+    const allBtn = filterDateScroller.querySelector('button[data-filter-date=""]');
+    if (allBtn) {
+        allBtn.addEventListener('click', () => {
+            document.querySelectorAll('#filter-date-scroller .date-btn').forEach(b => b.classList.remove('selected'));
+            allBtn.classList.add('selected');
+            filterEventsByDate('');
+        });
+    }
+    
+    const currentTrip = Storage.currentTrip;
+    let startDate, endDate;
+    
+    if (currentTrip && currentTrip.startDate && currentTrip.endDate) {
+        startDate = new Date(currentTrip.startDate);
+        endDate = new Date(currentTrip.endDate);
+    } else {
+        // Default: next 30 days
+        startDate = new Date();
+        endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+    }
+    
+    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateBtn = document.createElement('button');
+        dateBtn.className = 'date-btn';
+        dateBtn.dataset.filterDate = d.toISOString().split('T')[0];
+        
+        const dayName = dayNames[d.getDay()];
+        const dateNum = d.getDate();
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        
+        dateBtn.innerHTML = `
+            <span class="date-day">${dayName}</span>
+            <span class="date-date">${month} ${dateNum}</span>
+        `;
+        
+        dateBtn.addEventListener('click', () => {
+            document.querySelectorAll('#filter-date-scroller .date-btn').forEach(b => b.classList.remove('selected'));
+            dateBtn.classList.add('selected');
+            filterEventsByDate(dateBtn.dataset.filterDate);
+        });
+        
+        filterDateScroller.appendChild(dateBtn);
+    }
+}
+
+// Scroll filter dates left or right
+function scrollFilterDates(direction) {
+    const dateScroller = document.getElementById('filter-date-scroller');
+    if (!dateScroller) return;
+    const scrollAmount = 150;
+    dateScroller.scrollBy({
+        left: direction * scrollAmount,
+        behavior: 'smooth'
+    });
 }
 
 // Setup category filter
@@ -388,25 +504,92 @@ function setupCategoryFilter() {
     document.getElementById('category-filter-select').addEventListener('change', filterEventsByCategory);
 }
 
-// Filter by date
-function filterEventsByDate() {
-    const selectedDate = document.getElementById('date-filter-select').value;
+// Filter by date (called from date scroller with date parameter)
+function filterEventsByDate(selectedDate = '') {
+    // If called without parameter, get from old select (for backward compatibility)
+    if (selectedDate === '' && document.getElementById('date-filter-select')) {
+        selectedDate = document.getElementById('date-filter-select').value;
+    }
+    
+    // Get current category filter
+    const selectedCategory = document.getElementById('category-filter-select')?.value || '';
+    
     const events = Storage.events;
     const filteredEvents = events.filter(event => {
-        const eventDate = new Date(event.time).toISOString().split('T')[0];
-        return selectedDate === '' || eventDate === selectedDate;
+        // Handle invalid time values
+        if (!event.time) return false;
+        const eventDateObj = new Date(event.time);
+        if (isNaN(eventDateObj.getTime())) return false;
+        const eventDate = eventDateObj.toISOString().split('T')[0];
+        
+        // Support both single date (legacy) and multi-select dates array
+        // Check if event has dates array or use single date from time
+        const eventDates = event.dates || (eventDate ? [eventDate] : []);
+        
+        // Date match: if no filter selected OR event has the selected date
+        const dateMatch = selectedDate === '' || eventDates.includes(selectedDate);
+        const categoryMatch = selectedCategory === '' || event.category === selectedCategory;
+        
+        return dateMatch && categoryMatch;
     });
     renderFilteredEvents(filteredEvents);
+    
+    // Sync mobile filter date selection
+    syncMobileFilterDateSelection(selectedDate);
+    
+    // Also filter map markers
+    if (typeof MapModule !== 'undefined' && MapModule.filterMarkers) {
+        MapModule.filterMarkers(selectedDate, selectedCategory);
+    }
+}
+
+// Sync mobile filter date selection from desktop
+function syncMobileFilterDateSelection(selectedDate) {
+    const mobileDateScroller = document.getElementById('mobile-filter-date-scroller');
+    if (!mobileDateScroller) return;
+    
+    // Update selected state
+    mobileDateScroller.querySelectorAll('.date-btn').forEach(btn => {
+        if (btn.dataset.filterDate === selectedDate) {
+            btn.classList.add('selected');
+            // Scroll into view
+            btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        } else {
+            btn.classList.remove('selected');
+        }
+    });
 }
 
 // Filter by category
 function filterEventsByCategory() {
     const selectedCategory = document.getElementById('category-filter-select').value;
+    
+    // Get current date filter
+    const selectedDate = document.querySelector('#filter-date-scroller .date-btn.selected')?.dataset?.filterDate || '';
+    
     const events = Storage.events;
     const filteredEvents = events.filter(event => {
-        return selectedCategory === '' || event.category === selectedCategory;
+        // Handle invalid time values
+        if (!event.time) return false;
+        const eventDateObj = new Date(event.time);
+        if (isNaN(eventDateObj.getTime())) return false;
+        const eventDate = eventDateObj.toISOString().split('T')[0];
+        
+        // Support both single date (legacy) and multi-select dates array
+        const eventDates = event.dates || (eventDate ? [eventDate] : []);
+        
+        // Date match: if no filter selected OR event has the selected date
+        const dateMatch = selectedDate === '' || eventDates.includes(selectedDate);
+        const categoryMatch = selectedCategory === '' || event.category === selectedCategory;
+        
+        return dateMatch && categoryMatch;
     });
     renderFilteredEvents(filteredEvents);
+    
+    // Also filter map markers
+    if (typeof MapModule !== 'undefined' && MapModule.filterMarkers) {
+        MapModule.filterMarkers(selectedDate, selectedCategory);
+    }
 }
 
 // Render filtered events
@@ -415,6 +598,8 @@ function renderFilteredEvents(filteredEvents) {
     
     if (filteredEvents.length === 0) {
         Events.showEmptyState();
+        // Also sync mobile list with empty state
+        syncMobileEventsList();
         return;
     }
     
@@ -426,12 +611,58 @@ function renderFilteredEvents(filteredEvents) {
         eventEl.className = `event-item category-${event.category}`;
         
         const formattedTime = Events.formatEventTime(event.time);
-        const categoryText = t[event.category];
+        const categoryText = t[event.category] || event.category;
+        
+        // Fix venue display - use event.venue instead of event.location (which is an object)
+        let displayVenue = 'Unknown';
+        if (event.venue && typeof event.venue === 'string') {
+            displayVenue = event.venue;
+        } else if (event.location && typeof event.location === 'object') {
+            // Fallback to coordinates if venue is not set
+            displayVenue = `${event.location.lat.toFixed(4)}, ${event.location.lng.toFixed(4)}`;
+        }
+        
+        // Format dates display - show all selected dates in compact format
+        let datesDisplay = '';
+        let timeOnly = '';
+        
+        // Check if event has dates array (new format) or use single date from time (legacy)
+        if (event.dates && event.dates.length > 0) {
+            datesDisplay = formatFilterEventDates(event.dates);
+        } else {
+            // Fallback: extract date from event.time
+            const dateMatch = event.time.match(/^(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) {
+                const date = new Date(dateMatch[1]);
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayName = dayNames[date.getDay()];
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                const day = date.getDate();
+                datesDisplay = `${dayName}, ${month} ${day}`;
+            }
+        }
+        
+        // Extract only time (HH:MM AM/PM) from formattedTime or event.time
+        const timeMatch = formattedTime.match(/(\d{1,2}:\d{2}\s*[AP]M)/);
+        if (timeMatch) {
+            timeOnly = timeMatch[1];
+        } else {
+            // Fallback: extract time from event.time directly
+            const timeDirectMatch = event.time.match(/T(\d{2}):(\d{2})/);
+            if (timeDirectMatch) {
+                const [, hourStr, minStr] = timeDirectMatch;
+                let hour = parseInt(hourStr);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                hour = hour % 12 || 12;
+                timeOnly = `${hour}:${minStr} ${ampm}`;
+            }
+        }
         
         eventEl.innerHTML = `
             <strong>${event.name}</strong>
-            <p>📍 ${event.location}</p>
-            <p>🕐 ${formattedTime}</p>
+            <p>📍 ${displayVenue}</p>
+            <p>📅 ${datesDisplay}</p>
+            <p>🕐 ${timeOnly}</p>
             <span class="category-label">${categoryText}</span>
         `;
         
@@ -441,19 +672,29 @@ function renderFilteredEvents(filteredEvents) {
             Events.viewEvent(index);
         });
         
-        eventsList.appendChild(eventEl);
+    eventsList.appendChild(eventEl);
     });
     
     Events.updateEventCount();
+    
+    // Sync mobile events list
+    syncMobileEventsList();
 }
 
-// Populate date dropdown
+// Populate date dropdown (legacy function - kept for backward compatibility)
 function populateDateDropdown() {
     const dateSelect = document.getElementById('date-filter-select');
+    if (!dateSelect) return; // Element no longer exists, using scroller instead
+    
     const events = Storage.events;
-    const dates = Array.from(new Set(events.map(event => {
-        return new Date(event.time).toISOString().split('T')[0];
-    }))).sort();
+    
+    // Filter out events with invalid time values
+    const dates = Array.from(new Set(events
+        .filter(event => event.time && !isNaN(new Date(event.time).getTime()))
+        .map(event => {
+            return new Date(event.time).toISOString().split('T')[0];
+        })
+    )).sort();
 
     dateSelect.innerHTML = '<option value="">All Dates</option>';
     dates.forEach(date => {
@@ -542,6 +783,229 @@ function showHomePage() {
     Trips.showTripListView();
 }
 
+// ============================================
+// MOBILE EVENTS PANEL (Map Bottom Sheet)
+// ============================================
+
+let mobileEventsPanelExpanded = false;
+
+// Setup mobile events panel (slides up from bottom of map)
+function setupMobileEventsPanel() {
+    const panel = document.getElementById('mobile-events-panel');
+    const panelHeader = document.getElementById('mobile-events-panel-header');
+    const closeBtn = document.getElementById('mobile-events-panel-close');
+    const fabBtn = document.getElementById('mobile-event-fab');
+    
+    if (!panel) return;
+    
+    // FAB button - toggle panel visibility
+    if (fabBtn) {
+        fabBtn.addEventListener('click', () => {
+            mobileEventsPanelExpanded = !mobileEventsPanelExpanded;
+            updateMobileEventsPanelState();
+        });
+    }
+    
+    // Panel header click/drag to toggle
+    if (panelHeader) {
+        let startY = 0;
+        let startExpanded = false;
+        
+        // Touch events
+        panelHeader.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            startExpanded = mobileEventsPanelExpanded;
+        }, { passive: true });
+        
+        panelHeader.addEventListener('touchend', (e) => {
+            const deltaY = startY - e.changedTouches[0].clientY;
+            // Swipe up to expand, swipe down to collapse
+            if (deltaY > 50 && !startExpanded) {
+                mobileEventsPanelExpanded = true;
+                updateMobileEventsPanelState();
+            } else if (deltaY < -50 && startExpanded) {
+                mobileEventsPanelExpanded = false;
+                updateMobileEventsPanelState();
+            }
+        }, { passive: true });
+        
+        // Click to toggle (if not dragging)
+        panelHeader.addEventListener('click', () => {
+            mobileEventsPanelExpanded = !mobileEventsPanelExpanded;
+            updateMobileEventsPanelState();
+        });
+    }
+    
+    // Close button - collapse panel
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mobileEventsPanelExpanded = false;
+            updateMobileEventsPanelState();
+        });
+    }
+    
+    // Setup mobile filter controls
+    setupMobileFilters();
+    
+    // Initial state - hidden
+    updateMobileEventsPanelState();
+}
+
+// Setup mobile filter controls (date scroller and category filter)
+function setupMobileFilters() {
+    // Mobile date scroller
+    const mobileDateScroller = document.getElementById('mobile-filter-date-scroller');
+    const mobileLeftScrollBtn = document.getElementById('mobile-filter-date-scroll-left');
+    const mobileRightScrollBtn = document.getElementById('mobile-filter-date-scroll-right');
+    
+    if (mobileDateScroller) {
+        // Setup scroll buttons
+        if (mobileLeftScrollBtn) {
+            mobileLeftScrollBtn.addEventListener('click', () => scrollMobileFilterDates(-1));
+        }
+        if (mobileRightScrollBtn) {
+            mobileRightScrollBtn.addEventListener('click', () => scrollMobileFilterDates(1));
+        }
+        
+        // Generate date buttons
+        generateMobileFilterDateButtons();
+    }
+    
+    // Mobile category filter
+    const mobileCategoryFilter = document.getElementById('mobile-category-filter-select');
+    if (mobileCategoryFilter) {
+        mobileCategoryFilter.addEventListener('change', () => {
+            // Sync with desktop category filter
+            const desktopCategoryFilter = document.getElementById('category-filter-select');
+            if (desktopCategoryFilter) {
+                desktopCategoryFilter.value = mobileCategoryFilter.value;
+            }
+            // Apply filter
+            filterEventsByCategory();
+        });
+    }
+}
+
+// Generate mobile filter date buttons based on trip dates
+function generateMobileFilterDateButtons() {
+    const mobileDateScroller = document.getElementById('mobile-filter-date-scroller');
+    if (!mobileDateScroller) return;
+    
+    // Keep the "All" button with click handler
+    mobileDateScroller.innerHTML = '<button class="date-btn selected" data-filter-date="">All</button>';
+    
+    // Add click handler to "All" button
+    const allBtn = mobileDateScroller.querySelector('button[data-filter-date=""]');
+    if (allBtn) {
+        allBtn.addEventListener('click', () => {
+            document.querySelectorAll('#mobile-filter-date-scroller .date-btn').forEach(b => b.classList.remove('selected'));
+            allBtn.classList.add('selected');
+            // Sync with desktop filter
+            const desktopAllBtn = document.querySelector('#filter-date-scroller button[data-filter-date=""]');
+            if (desktopAllBtn) desktopAllBtn.click();
+        });
+    }
+    
+    const currentTrip = Storage.currentTrip;
+    let startDate, endDate;
+    
+    if (currentTrip && currentTrip.startDate && currentTrip.endDate) {
+        startDate = new Date(currentTrip.startDate);
+        endDate = new Date(currentTrip.endDate);
+    } else {
+        // Default: next 30 days
+        startDate = new Date();
+        endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+    }
+    
+    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateBtn = document.createElement('button');
+        dateBtn.className = 'date-btn';
+        dateBtn.dataset.filterDate = d.toISOString().split('T')[0];
+        
+        const dayName = dayNames[d.getDay()];
+        const dateNum = d.getDate();
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        
+        dateBtn.innerHTML = `
+            <span class="date-day">${dayName}</span>
+            <span class="date-date">${month} ${dateNum}</span>
+        `;
+        
+        dateBtn.addEventListener('click', () => {
+            document.querySelectorAll('#mobile-filter-date-scroller .date-btn').forEach(b => b.classList.remove('selected'));
+            dateBtn.classList.add('selected');
+            // Sync with desktop filter
+            const desktopBtn = document.querySelector(`#filter-date-scroller button[data-filter-date="${dateBtn.dataset.filterDate}"]`);
+            if (desktopBtn) desktopBtn.click();
+        });
+        
+        mobileDateScroller.appendChild(dateBtn);
+    }
+}
+
+// Scroll mobile filter dates left or right
+function scrollMobileFilterDates(direction) {
+    const dateScroller = document.getElementById('mobile-filter-date-scroller');
+    if (!dateScroller) return;
+    const scrollAmount = 150;
+    dateScroller.scrollBy({
+        left: direction * scrollAmount,
+        behavior: 'smooth'
+    });
+}
+
+// Update mobile events panel state (expanded/collapsed)
+function updateMobileEventsPanelState() {
+    const panel = document.getElementById('mobile-events-panel');
+    const fabBtn = document.getElementById('mobile-event-fab');
+    const fabIcon = fabBtn?.querySelector('svg');
+    
+    if (panel) {
+        if (mobileEventsPanelExpanded) {
+            panel.classList.add('expanded');
+        } else {
+            panel.classList.remove('expanded');
+        }
+    }
+    
+    // Update FAB button icon - rotate when expanded
+    if (fabIcon) {
+        if (mobileEventsPanelExpanded) {
+            fabIcon.style.transform = 'rotate(180deg)';
+        } else {
+            fabIcon.style.transform = 'rotate(0deg)';
+        }
+    }
+}
+
+// Sync events list to mobile panel (called after rendering events)
+function syncMobileEventsList() {
+    const mobileList = document.getElementById('mobile-events-list');
+    const desktopList = document.getElementById('events-list');
+    
+    if (mobileList && desktopList) {
+        // Clone the events list content
+        mobileList.innerHTML = desktopList.innerHTML;
+        
+        // Re-attach click handlers to cloned items
+        const mobileItems = mobileList.querySelectorAll('.event-item');
+        const desktopItems = desktopList.querySelectorAll('.event-item');
+        
+        mobileItems.forEach((item, index) => {
+            if (desktopItems[index]) {
+                item.addEventListener('click', () => {
+                    desktopItems[index].click();
+                });
+            }
+        });
+    }
+}
+
 // Export functions
 window.UI = {
     setLanguage,
@@ -557,5 +1021,13 @@ window.UI = {
     setupFilterToggle,
     setupDateTimeDropdowns,
     setupScrollBehavior,
-    showHomePage
+    showHomePage,
+    generateFilterDateButtons,
+    scrollFilterDates,
+    setupMobileEventsPanel,
+    syncMobileEventsList,
+    setupMobileFilters,
+    generateMobileFilterDateButtons,
+    scrollMobileFilterDates,
+    syncMobileFilterDateSelection
 };

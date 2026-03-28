@@ -51,8 +51,9 @@ async function searchLocation(query) {
     const searchResultsEl = document.getElementById('search-results');
     
     try {
-        // Use Photon API which has better CORS support
-        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
+        // Use Photon API with language parameter for Traditional Chinese
+        const lang = Storage.currentLang === 'zh-TW' ? 'zh' : 'en';
+        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=${lang}`);
         const data = await response.json();
         
         if (data.features && data.features.length > 0) {
@@ -109,8 +110,21 @@ function displaySearchResults(results) {
                 searchResultsEl.classList.add('hidden');
                 document.getElementById('map-search-input').value = result.name;
                 
-                // Open add event form at this location
-                Events.openAddEventForm({ lat: result.lat, lng: result.lng });
+                // Open add event form at this location with venue pre-filled
+                const latlng = { lat: result.lat, lng: result.lng };
+                Events.openAddEventForm(latlng, false);
+                
+                // Pre-fill venue field with search result name
+                setTimeout(() => {
+                    const venueInput = document.getElementById('event-venue');
+                    if (venueInput) {
+                        venueInput.value = result.name;
+                        // Update wizardData
+                        if (window.Events && window.Events.wizardData) {
+                            window.Events.wizardData.venue = result.name;
+                        }
+                    }
+                }, 100);
             }
         });
     });

@@ -27,17 +27,46 @@ let expenseSettings = {
 // Current trip expenses
 let expenses = [];
 
-// Load saved events from localStorage
+// Load events from localStorage
 function loadEvents() {
     const savedEvents = localStorage.getItem('tripEvents');
     if (savedEvents) {
         events = JSON.parse(savedEvents);
-        // Ensure all events have latLng property
+        // Migrate events to new data structure
         events = events.map(event => {
+            // Ensure all events have latLng property
             if (!event.latLng) {
-                // Provide default Hong Kong coordinates
                 event.latLng = [22.3193, 114.1694];
             }
+            
+            // Migrate old location string to new venue/location structure
+            if (typeof event.location === 'string') {
+                event.venue = event.location;
+                event.location = {
+                    lat: event.latLng[0],
+                    lng: event.latLng[1]
+                };
+            } else if (!event.location && event.latLng) {
+                event.location = {
+                    lat: event.latLng[0],
+                    lng: event.latLng[1]
+                };
+            }
+            
+            // Initialize new optional fields if not present
+            if (!event.hasOwnProperty('target')) {
+                event.target = '';
+            }
+            if (!event.hasOwnProperty('targetLink')) {
+                event.targetLink = '';
+            }
+            if (!event.hasOwnProperty('preparation')) {
+                event.preparation = '';
+            }
+            if (!event.hasOwnProperty('venue')) {
+                event.venue = '';
+            }
+            
             return event;
         });
         renderEvents();
@@ -92,6 +121,12 @@ function loadSavedTrips() {
     
     // Display saved trips on home page
     renderSavedTrips();
+}
+
+// Save current trip to localStorage
+function saveCurrentTrip() {
+    localStorage.setItem('currentTrip', JSON.stringify(currentTrip));
+    localStorage.setItem('currentTripId', currentTrip.id);
 }
 
 // Save language preference
@@ -219,6 +254,7 @@ window.Storage = {
     loadEvents,
     saveEvents,
     saveTrips,
+    saveCurrentTrip,
     loadSavedTrips,
     saveLanguage,
     loadLanguage,

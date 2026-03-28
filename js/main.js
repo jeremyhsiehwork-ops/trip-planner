@@ -2,6 +2,15 @@
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Theme Module (must be first to apply theme)
+    if (typeof ThemeModule !== 'undefined') {
+        ThemeModule.init();
+    }
+    
+    // Initialize Timeline Module
+    if (typeof TimelineModule !== 'undefined') {
+        TimelineModule.init();
+    }
     // Initialize bottom navigation first
     initBottomNav();
 
@@ -31,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize map
     MapModule.initMap();
+    
+    // Setup share button in header
+    setupShareButton();
 
     // Add event button
     document.getElementById('add-event-btn').addEventListener('click', () => {
@@ -53,6 +65,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Category filter
     UI.setupCategoryFilter();
+    
+    // Listen for trip changes to update filter dates
+    document.addEventListener('trip-loaded', () => {
+        UI.generateFilterDateButtons();
+        UI.generateMobileFilterDateButtons(); // Also update mobile filters
+        Events.renderEvents(); // Re-render events when trip is loaded
+        
+        // On desktop, ensure events section is visible
+        if (window.innerWidth >= 1024) {
+            const eventsSection = document.querySelector('.events-section');
+            if (eventsSection) {
+                eventsSection.classList.remove('hidden');
+            }
+        }
+    });
+    
+    // Listen for events loaded to update filter
+    document.addEventListener('events-loaded', () => {
+        UI.generateFilterDateButtons();
+        UI.generateMobileFilterDateButtons(); // Also update mobile filters
+        Events.renderEvents();
+        // Refresh timeline view
+        if (typeof TimelineModule !== 'undefined') {
+            TimelineModule.refresh();
+        }
+        
+        // On desktop, ensure events section is visible
+        if (window.innerWidth >= 1024) {
+            const eventsSection = document.querySelector('.events-section');
+            if (eventsSection) {
+                eventsSection.classList.remove('hidden');
+            }
+        }
+    });
+    
+    // Listen for event added/updated to refresh timeline
+    document.addEventListener('event-saved', () => {
+        if (typeof TimelineModule !== 'undefined') {
+            TimelineModule.refresh();
+        }
+    });
+    
+    // Listen for event deleted to refresh timeline
+    document.addEventListener('event-deleted', () => {
+        if (typeof TimelineModule !== 'undefined') {
+            TimelineModule.refresh();
+        }
+    });
     
     // Filter toggle
     UI.setupFilterToggle();
@@ -92,12 +152,68 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tutorial buttons
     setupTutorialButtons();
     
-    // Map toggle button
-    setupMapToggle();
+    // Mobile events panel (slides up from bottom of map)
+    UI.setupMobileEventsPanel();
     
     // Map refresh button
     setupMapRefresh();
+    
+    // Initialize import/export functionality
+    setupImportExport();
+    
+    // Check for shared trip data in URL
+    checkForSharedTrip();
 });
+
+// Setup share button in header
+function setupShareButton() {
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions && !document.getElementById('share-trip-btn')) {
+        const shareBtn = document.createElement('button');
+        shareBtn.id = 'share-trip-btn';
+        shareBtn.className = 'header-refresh-btn';
+        shareBtn.title = 'Share Trip';
+        shareBtn.innerHTML = '<i data-lucide="share-2"></i>';
+        headerActions.insertBefore(shareBtn, headerActions.lastElementChild);
+        
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        
+        shareBtn.addEventListener('click', () => {
+            if (typeof ShareModule !== 'undefined') {
+                ShareModule.showShareModal();
+            }
+        });
+    }
+}
+
+// Check for shared trip data in URL
+function checkForSharedTrip() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareData = urlParams.get('share');
+    
+    if (shareData && typeof ShareModule !== 'undefined') {
+        const parsed = ShareModule.parseSharedData(urlParams);
+        if (parsed) {
+            const t = translations[Storage.currentLang] || translations.en;
+            
+            if (confirm(`Import shared trip "${parsed.trip?.name || 'Unknown'}"?`)) {
+                ShareModule.importSharedTrip(parsed).then(success => {
+                    if (success) {
+                        // Reload the app to show imported data
+                        window.location.href = window.location.origin + window.location.pathname;
+                    } else {
+                        alert(t.importFailed || 'Failed to import trip');
+                    }
+                });
+            } else {
+                // Clear the share parameter
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+    }
+}
 
 // Initialize expense settings functionality
 function initExpenseSettings() {
@@ -238,6 +354,7 @@ function updateDefaultCurrencySelect() {
     }
 }
 
+
 // Setup map toggle functionality
 function setupMapToggle() {
     const mapToggleBtn = document.getElementById('map-toggle-btn');
@@ -329,6 +446,13 @@ function setupTutorialButtons() {
                 Onboarding.toggle('tripEditor');
             }
         });
+    }
+}
+
+// Setup import/export functionality
+function setupImportExport() {
+    if (typeof ImportExport !== 'undefined') {
+        ImportExport.setupImportExport();
     }
 }
 

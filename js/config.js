@@ -33,7 +33,9 @@ const eventCategories = {
     dinner: { color: '#dc3545', icon: '🍛' },
     view: { color: '#6f42c1', icon: '🏞️' },
     play: { color: '#fd7e14', icon: '🎡' },
-    transportation: { color: '#17a2b8', icon: '🚌' }
+    transportation: { color: '#00bcd4', icon: '🚌' },
+    event: { color: '#e91e63', icon: '🎉' },
+    shopping: { color: '#9c27b0', icon: '🛍️' }
 };
 
 // Language translations
@@ -107,6 +109,8 @@ const translations = {
         view: "View/Attraction",
         play: "Activity/Play",
         transportation: "Transportation",
+        event: "Event/活動",
+        shopping: "Shopping/購物",
         
         // Buttons
         cancel: "Cancel",
@@ -258,7 +262,54 @@ const translations = {
         // Validation
         enterItemName: "Please enter item name",
         enterAmount: "Please enter amount",
-        selectPayer: "Please select at least one payer"
+        selectPayer: "Please select at least one payer",
+        
+        // New Fields
+        venue: "Venue",
+        venuePlaceholder: "Enter venue name",
+        searchVenue: "Search Venue",
+        searchVenuePlaceholder: "Search venue name...",
+        coordinates: "Location (Coordinates)",
+        tapMapToPick: "Tap on map to pick location...",
+        target: "Target",
+        targetPlaceholder: "Enter target (e.g., 必食，必玩，必睇)",
+        targetLink: "Reference Link",
+        targetLinkPlaceholder: "https://...",
+        preparation: "Preparation",
+        preparationPlaceholder: "Enter preparation notes (markdown supported)...",
+        openInGoogleMaps: "Open in Google Maps",
+        viewReference: "View Reference",
+        
+        // Import/Export
+        importExport: "Import/Export",
+        exportTrip: "Export Trip",
+        exportTripDesc: "Download trip data as JSON file",
+        importTrip: "Import Trip",
+        importTripDesc: "Import from JSON file or itinerary text",
+        importFromFile: "From File",
+        importFromText: "From Text",
+        uploadJsonFile: "Upload JSON file",
+        selectJsonFileDesc: "Select a trip export file to import",
+        selectFile: "Select File",
+        pasteItineraryText: "Paste Itinerary Text",
+        pasteItineraryPlaceholder: "Paste your itinerary table here...\n\nExample format:\nDate\tDay\tTime\tLocation\tTransport\tTarget\tHotel\n4/9\t三\t14:35\t抵達小松機場\t機場巴士\t\t富山站前大和 ROYNET 酒店",
+        itineraryFormatHint: "Supports tab-separated itinerary format with columns: Date, Day, Time, Location, Transport, Target, Hotel",
+        parseAndPreview: "Parse & Preview",
+        previewImport: "Preview Import",
+        confirmImport: "Confirm Import",
+        importedTrip: "Imported Trip",
+        dateRange: "Date range",
+        eventsCount: "events",
+        importHint: "Events will be added to your current trip. Duplicate events (same name and time) will be skipped.",
+        noEventsFound: "No events found in the text. Please check the format.",
+        importSuccess: "Import successful!",
+        importFailed: "Import failed: ",
+        
+        // PWA Update Notifications
+        newVersionAvailable: "New version available!",
+        refreshNow: "Refresh Now",
+        later: "Later",
+        appUpToDate: "App is up to date"
     },
     'zh-TW': {
         // Navigation
@@ -329,6 +380,8 @@ const translations = {
         view: "景點",
         play: "活動",
         transportation: "交通",
+        event: "活動",
+        shopping: "購物",
         
         // Buttons
         cancel: "取消",
@@ -480,7 +533,54 @@ const translations = {
         // Validation
         enterItemName: "請輸入項目名稱",
         enterAmount: "請輸入金額",
-        selectPayer: "請選擇至少一位付款人"
+        selectPayer: "請選擇至少一位付款人",
+        
+        // New Fields
+        venue: "地點名稱",
+        venuePlaceholder: "輸入地點名稱",
+        searchVenue: "搜尋地點",
+        searchVenuePlaceholder: "搜尋地點名稱...",
+        coordinates: "位置（座標）",
+        tapMapToPick: "點擊地圖選擇位置...",
+        target: "目標",
+        targetPlaceholder: "輸入目標（例如：必食，必玩，必睇）",
+        targetLink: "參考連結",
+        targetLinkPlaceholder: "https://...",
+        preparation: "準備事項",
+        preparationPlaceholder: "輸入準備事項（支援 Markdown）...",
+        openInGoogleMaps: "在 Google 地圖開啟",
+        viewReference: "查看參考",
+        
+        // Import/Export
+        importExport: "導入/導出",
+        exportTrip: "導出行程",
+        exportTripDesc: "將行程數據下載為 JSON 文件",
+        importTrip: "導入行程",
+        importTripDesc: "從 JSON 文件或行程文本導入",
+        importFromFile: "從文件導入",
+        importFromText: "從文本導入",
+        uploadJsonFile: "上傳 JSON 文件",
+        selectJsonFileDesc: "選擇要導入的行程導出文件",
+        selectFile: "選擇文件",
+        pasteItineraryText: "粘貼行程文本",
+        pasteItineraryPlaceholder: "在此粘貼您的行程表...\n\n格式示例：\n日期\t星期\t時間\t地點/行程\t交通/備註\t目標\t住宿\n4/9\t三\t14:35\t抵達小松機場\t機場巴士\t\t富山站前大和 ROYNET 酒店",
+        itineraryFormatHint: "支援製表符分隔的行程格式，列包括：日期、星期、時間、地點/行程、交通/備註、目標、住宿",
+        parseAndPreview: "解析和預覽",
+        previewImport: "預覽導入",
+        confirmImport: "確認導入",
+        importedTrip: "已導入的行程",
+        dateRange: "日期範圍",
+        eventsCount: "個活動",
+        importHint: "活動將添加到您當前的行程中。重複的活動（相同名稱和時間）將被跳過。",
+        noEventsFound: "在文本中未找到活動。請檢查格式。",
+        importSuccess: "導入成功！",
+        importFailed: "導入失敗：",
+        
+        // PWA Update Notifications
+        newVersionAvailable: "新版本可用！",
+        refreshNow: "立即更新",
+        later: "稍後",
+        appUpToDate: "應用已是最新版本"
     }
 };
 

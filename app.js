@@ -22,7 +22,9 @@ let eventCategories = {
     dinner: { color: '#dc3545', icon: '🍛' },
     view: { color: '#6f42c1', icon: '🏞️' },
     play: { color: '#fd7e14', icon: '🎡' },
-    transportation: { color: '#17a2b8', icon: '🚌' }
+    transportation: { color: '#00bcd4', icon: '🚌' },
+    event: { color: '#e91e63', icon: '🎉' },
+    shopping: { color: '#9c27b0', icon: '🛍️' }
 };
 
 // Language translations
@@ -50,6 +52,8 @@ const translations = {
         dinner: "Dinner",
         view: "View/Attraction",
         play: "Activity/Play",
+        event: "Event/活動",
+        shopping: "Shopping",
         cancel: "Cancel",
         addEventBtn: "Add Event",
         backToHome: "Back to Home",
@@ -92,6 +96,8 @@ const translations = {
         dinner: "晚餐",
         view: "景點",
         play: "活動",
+        event: "活動/Event",
+        shopping: "購物",
         cancel: "取消",
         addEventBtn: "新增活動",
         backToHome: "返回首頁",
@@ -195,18 +201,20 @@ function renderEvents() {
 
 // Add a new event
 function addEvent(name, location, time, description, category, latlng) {
-    // Ensure latLng is properly defined
+    // Ensure latlng is properly defined
     if (!latlng) {
-        latlng = [22.3193, 114.1694];
+        latlng = { lat: 22.3193, lng: 114.1694 };
     }
     
+    // Only store 'location' object, no duplicate 'latLng' array
     events.push({
         name,
-        location,
+        venue: location, // Use venue field for display name
+        location: { lat: latlng.lat, lng: latlng.lng },
         time,
         description,
-        category,
-        latLng: [latlng.lat, latlng.lng]
+        category
+        // Note: Only 'location' object is stored, no duplicate 'latLng' array
     });
     saveEvents();
     renderEvents();
@@ -800,7 +808,9 @@ function setLanguage(lang) {
         'dinner': `🍛 ${t.dinner}`,
         'view': `🏞️ ${t.view}`,
         'play': `🎡 ${t.play}`,
-        'transportation': `🚌 ${t.transportation}`
+        'transportation': `🚌 ${t.transportation || 'Transportation'}`,
+        'event': `🎉 ${t.event || 'Event'}`,
+        'shopping': `🛍️ ${t.shopping || 'Shopping'}`
     };
     
     Object.entries(categoryOptions).forEach(([value, text]) => {
@@ -820,6 +830,8 @@ function setLanguage(lang) {
             <option value="view">${t.view}</option>
             <option value="play">${t.play}</option>
             <option value="transportation">${t.transportation || 'Transportation'}</option>
+            <option value="event">${t.event || 'Event'}</option>
+            <option value="shopping">${t.shopping || 'Shopping'}</option>
         `;
     }
     
@@ -1512,12 +1524,19 @@ function renderFilteredEvents(filteredEvents) {
     
     eventsList.innerHTML = '';
 
-    filteredEvents.forEach((event) => {
+    filteredEvents.forEach((event, filteredIndex) => {
         const eventEl = document.createElement('div');
         eventEl.className = `event-item category-${event.category}`;
         
         const formattedTime = formatEventTime(event.time);
         const categoryText = translations[currentLang][event.category];
+        
+        // Find the actual index in the full events array
+        const actualIndex = events.findIndex(e => 
+            e.name === event.name && 
+            e.time === event.time && 
+            e.category === event.category
+        );
         
         eventEl.innerHTML = `
             <strong>${event.name}</strong>
@@ -1527,8 +1546,9 @@ function renderFilteredEvents(filteredEvents) {
         `;
         
         eventEl.addEventListener('click', () => {
-            const index = events.findIndex(e => e === event);
-            viewEvent(index);
+            if (actualIndex !== -1) {
+                viewEvent(actualIndex);
+            }
         });
         
         eventsList.appendChild(eventEl);

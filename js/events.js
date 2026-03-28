@@ -1,13 +1,20 @@
 // Events Module - Event CRUD operations with Multi-Step Wizard
 
 let currentEditIndex = null;
+let eventsReadyCallbacks = [];
+let eventsInitialized = false;
 let currentStep = 1;
 let wizardData = {
     category: '',
     name: '',
+    venue: '',
     location: '',
     description: '',
-    date: '',
+    target: '',
+    targetLink: '',
+    preparation: '',
+    dates: [], // Multi-select dates array
+    date: '',  // Single date (legacy/primary)
     time: '09:00',
     ampm: 'AM',
     latlng: null
@@ -43,39 +50,166 @@ function showEmptyState() {
     updateEventCount();
 }
 
-// Update event count
+// Update event count (both desktop header and mobile badge)
 function updateEventCount() {
     const eventCountEl = document.getElementById('event-count');
+    const mobileEventCountEl = document.getElementById('mobile-event-count');
     const t = translations[Storage.currentLang];
     const events = Storage.events;
     const count = events.length;
-    eventCountEl.textContent = `${count} ${t.eventsCount}`;
+    
+    // Update desktop header
+    if (eventCountEl) {
+        eventCountEl.textContent = `${count} ${t.eventsCount}`;
+    }
+    
+    // Update mobile badge
+    if (mobileEventCountEl) {
+        mobileEventCountEl.textContent = count;
+    }
 }
 
-// Render events to the schedule list
+// Notify callbacks when events are ready
+function notifyEventsReady() {
+    eventsInitialized = true;
+    eventsReadyCallbacks.forEach(cb => cb());
+    eventsReadyCallbacks = [];
+}
+
+// Register callback for when events are ready
+function onEventsReady(callback) {
+    if (eventsInitialized) {
+        callback();
+    } else {
+        eventsReadyCallbacks.push(callback);
+    }
+}
+
+// Format dates display for multi-day events
+function formatEventDates(dates) {
+    if (!dates || dates.length === 0) return '';
+    
+    if (dates.length === 1) {
+        // Single date - show full format
+        const date = new Date(dates[0]);
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = dayNames[date.getDay()];
+        return `${dayName}, ${date.toLocaleString(Storage.currentLang === 'zh-TW' ? 'zh-TW' : 'en-US', {
+            month: 'short',
+            day: 'numeric'
+        })}`;
+    }
+    
+    // Multiple dates - group by month for compact display
+    const monthEvents = {};
+    dates.forEach(dateStr => {
+        const date = new Date(dateStr);
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const day = date.getDate();
+        if (!monthEvents[month]) monthEvents[month] = [];
+        monthEvents[month].push(day);
+    });
+    
+    // Build display string
+    const parts = Object.entries(monthEvents).map(([month, days]) => {
+        return `${month} ${days.join(',')}`;
+    });
+    return parts.join(' | ');
+}
+
+// Render events to the schedule list (both desktop and mobile bottom sheet)
 function renderEvents() {
     const eventsList = document.getElementById('events-list');
+    const mobileEventsList = document.getElementById('mobile-events-list');
     const events = Storage.events;
     
     if (events.length === 0) {
         showEmptyState();
+        // Also update mobile list
+        if (mobileEventsList) {
+            const t = translations[Storage.currentLang];
+            mobileEventsList.innerHTML = `
+                <div class="empty-state">
+                    <i data-lucide="map-pin" class="empty-icon"></i>
+                    <p>${t.noEvents}</p>
+                    <p class="empty-hint">${t.noEventsHint}</p>
+                </div>
+            `;
+        }
+        // Sync mobile panel with empty state
+        if (typeof UI !== 'undefined' && UI.syncMobileEventsList) {
+            UI.syncMobileEventsList();
+        }
         return;
     }
     
     eventsList.innerHTML = '';
+    if (mobileEventsList) mobileEventsList.innerHTML = '';
     const t = translations[Storage.currentLang];
+
+    // Notify that events are ready
+    notifyEventsReady();
 
     events.forEach((event, index) => {
         const eventEl = document.createElement('div');
         eventEl.className = `event-item category-${event.category}`;
         
         const formattedTime = formatEventTime(event.time);
-        const categoryText = t[event.category];
+        // Fallback for undefined category translations (shopping, event)
+        const category = event.category || 'view';
+        const categoryText = t[category] || category;
+        
+        // Display venue if available, otherwise show coordinates
+        let displayLocation = 'Unknown';
+        if (event.venue && typeof event.venue === 'string') {
+            displayLocation = event.venue;
+        } else if (event.location && typeof event.location === 'object' && event.location.lat !== undefined) {
+            displayLocation = `${event.location.lat.toFixed(4)}, ${event.location.lng.toFixed(4)}`;
+        } else if (event.latLng && Array.isArray(event.latLng) && event.latLng.length === 2) {
+            displayLocation = `${event.latLng[0].toFixed(4)}, ${event.latLng[1].toFixed(4)}`;
+        }
+        
+        // Format dates display - show all selected dates in compact format
+        let datesDisplay = '';
+        let timeOnly = '';
+        
+        // Check if event has dates array (new format) or use single date from time (legacy)
+        if (event.dates && event.dates.length > 0) {
+            datesDisplay = formatEventDates(event.dates);
+        } else {
+            // Fallback: extract date from event.time
+            const dateMatch = event.time.match(/^(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) {
+                const date = new Date(dateMatch[1]);
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayName = dayNames[date.getDay()];
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                const day = date.getDate();
+                datesDisplay = `${dayName}, ${month} ${day}`;
+            }
+        }
+        
+        // Extract only time (HH:MM AM/PM) from formattedTime or event.time
+        const timeMatch = formattedTime.match(/(\d{1,2}:\d{2}\s*[AP]M)/);
+        if (timeMatch) {
+            timeOnly = timeMatch[1];
+        } else {
+            // Fallback: extract time from event.time directly
+            const timeDirectMatch = event.time.match(/T(\d{2}):(\d{2})/);
+            if (timeDirectMatch) {
+                const [, hourStr, minStr] = timeDirectMatch;
+                let hour = parseInt(hourStr);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                hour = hour % 12 || 12;
+                timeOnly = `${hour}:${minStr} ${ampm}`;
+            }
+        }
         
         eventEl.innerHTML = `
             <strong>${event.name}</strong>
-            <p>📍 ${event.location}</p>
-            <p>🕐 ${formattedTime}</p>
+            <p>📍 ${displayLocation}</p>
+            <p>📅 ${datesDisplay}</p>
+            <p>🕐 ${timeOnly}</p>
             <span class="category-label">${categoryText}</span>
         `;
         
@@ -85,31 +219,52 @@ function renderEvents() {
         });
         
         eventsList.appendChild(eventEl);
+        
+        // Also add to mobile events list
+        if (mobileEventsList) {
+            const mobileEventEl = eventEl.cloneNode(true);
+            mobileEventEl.addEventListener('click', () => {
+                viewEvent(index);
+            });
+            mobileEventsList.appendChild(mobileEventEl);
+        }
     });
 
     updateEventCount();
+    
+    // Sync mobile panel with desktop list
+    if (typeof UI !== 'undefined' && UI.syncMobileEventsList) {
+        UI.syncMobileEventsList();
+    }
 }
 
 // Add a new event
-function addEvent(name, location, time, description, category, latlng) {
+function addEvent(name, venue, time, description, category, latlng, target = '', targetLink = '', preparation = '') {
     // Ensure latLng is properly defined
     if (!latlng) {
         latlng = { lat: 22.3193, lng: 114.1694 };
     }
     
     const events = Storage.events;
-    events.push({
+    const newEvent = {
         name,
-        location,
+        venue,
+        location: { lat: latlng.lat, lng: latlng.lng },
         time,
         description,
         category,
-        latLng: [latlng.lat, latlng.lng]
-    });
+        target,
+        targetLink,
+        preparation
+        // Note: Only 'location' object is stored, no duplicate 'latLng' array
+    };
+    events.push(newEvent);
     Storage.events = events;
     Storage.saveEvents();
     renderEvents();
-    MapModule.addMarker([latlng.lat, latlng.lng], name, category);
+    // Pass the event index (events.length - 1) to the marker
+    // Convert location object to array format for Leaflet map
+    MapModule.addMarker([latlng.lat, latlng.lng], name, category, newEvent, events.length - 1);
     updateDateDropdown();
 }
 
@@ -121,21 +276,115 @@ function viewEvent(index) {
     const modal = document.getElementById('event-detail-modal');
     const t = translations[Storage.currentLang];
     
-    // Focus map on the event location
-    if (event.latLng && MapModule.map) {
-        MapModule.map.setView(event.latLng, 15);
+    // Focus map on the event location - prioritize 'location' object, fallback to 'latLng' array for backward compatibility
+    let latLng = null;
+    if (event.location && event.location.lat !== undefined && event.location.lng !== undefined) {
+        latLng = [event.location.lat, event.location.lng];
+    } else if (event.latLng && Array.isArray(event.latLng) && event.latLng.length === 2) {
+        latLng = event.latLng;
+    }
+    if (latLng && MapModule.map) {
+        MapModule.map.setView(latLng, 15);
     }
     
     // Set category badge
     const categoryBadge = document.getElementById('detail-category-badge');
-    categoryBadge.textContent = t[event.category];
-    categoryBadge.style.background = eventCategories[event.category].color;
+    const category = event.category || 'view';
+    const categoryInfo = eventCategories[category] || { color: '#667eea', icon: '📍' };
+    categoryBadge.textContent = t[category] || category;
+    categoryBadge.style.background = categoryInfo.color;
     
     // Populate detail fields
     document.getElementById('detail-event-name').textContent = event.name;
-    document.getElementById('detail-location').textContent = event.location;
+    
+    // Venue field
+    const venueEl = document.getElementById('detail-venue');
+    const venueItem = venueEl.closest('.detail-item');
+    if (event.venue) {
+        venueEl.textContent = event.venue;
+        venueItem.classList.remove('hidden');
+    } else {
+        venueItem.classList.add('hidden');
+    }
+    
+    // DateTime field
     document.getElementById('detail-time').textContent = formatEventTime(event.time);
-    document.getElementById('detail-description').textContent = event.description || '-';
+    
+    // Target field with link
+    const targetEl = document.getElementById('detail-target');
+    const targetItem = document.getElementById('detail-target-item');
+    const targetLinkEl = document.getElementById('detail-target-link');
+    const targetLinkTextEl = document.getElementById('detail-target-link-text');
+    if (event.target) {
+        targetEl.textContent = event.target;
+        targetItem.classList.remove('hidden');
+        if (event.targetLink) {
+            targetLinkEl.href = event.targetLink;
+            targetLinkEl.classList.remove('hidden');
+            targetLinkTextEl.textContent = t.viewReference || 'View Reference';
+        } else {
+            targetLinkEl.classList.add('hidden');
+        }
+    } else {
+        targetItem.classList.add('hidden');
+    }
+    
+    // Description field
+    const descriptionEl = document.getElementById('detail-description');
+    const descriptionItem = descriptionEl.closest('.detail-item');
+    if (event.description) {
+        descriptionEl.textContent = event.description;
+        descriptionItem.classList.remove('hidden');
+    } else {
+        descriptionItem.classList.add('hidden');
+    }
+    
+    // Preparation field
+    const preparationEl = document.getElementById('detail-preparation');
+    const preparationItem = document.getElementById('detail-preparation-item');
+    if (event.preparation) {
+        preparationEl.textContent = event.preparation;
+        preparationItem.classList.remove('hidden');
+    } else {
+        preparationItem.classList.add('hidden');
+    }
+    
+    // Setup Google Maps link - use event.googleMapLink if available (from import), otherwise build from venue/coords
+    const googleMapsLink = document.getElementById('detail-google-maps-link');
+    const googleMapsText = document.getElementById('detail-google-maps-text');
+    
+    // Check if event has googleMapLink field (from import)
+    if (event.googleMapLink && event.googleMapLink.trim()) {
+        googleMapsLink.href = event.googleMapLink;
+    } else {
+        // Build Google Maps link - search by venue name first, fallback to coordinates
+        let coordsForMap = null;
+        if (event.location && event.location.lat !== undefined && event.location.lng !== undefined) {
+            coordsForMap = event.location;
+        } else if (event.latLng && Array.isArray(event.latLng) && event.latLng.length === 2) {
+            coordsForMap = { lat: event.latLng[0], lng: event.latLng[1] };
+        }
+        
+        if (event.venue && event.venue.trim()) {
+            // Search by venue name for more accurate results
+            googleMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`;
+        } else if (coordsForMap && coordsForMap.lat !== undefined && coordsForMap.lng !== undefined) {
+            // Fallback to coordinates
+            googleMapsLink.href = `https://www.google.com/maps?q=${coordsForMap.lat},${coordsForMap.lng}`;
+        } else {
+            googleMapsLink.href = '#';
+        }
+    }
+    googleMapsLink.classList.remove('hidden');
+    
+    // Set Google Maps link text with translation
+    if (googleMapsText) {
+        googleMapsText.textContent = t.openInGoogleMaps || 'Open in Google Maps';
+    }
+    
+    // Hide the coordinates location field (not user-friendly)
+    const locationItem = document.getElementById('detail-location').closest('.detail-item');
+    locationItem.classList.add('hidden');
     
     // Setup buttons
     const editBtn = document.getElementById('edit-detail-event');
@@ -155,6 +404,11 @@ function viewEvent(index) {
     
     // Show modal
     modal.classList.remove('hidden');
+    
+    // Refresh Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 // Edit an existing event - opens wizard with pre-filled data
@@ -164,14 +418,13 @@ function editEvent(index) {
     
     currentEditIndex = index;
     
-    // Pre-populate wizard data
-    wizardData = {
-        category: event.category,
-        name: event.name,
-        location: event.location,
-        description: event.description || '',
-        latlng: event.latLng ? { lat: event.latLng[0], lng: event.latLng[1] } : null
-    };
+    // Get location coordinates for the map with safe parsing
+    let latLng = null;
+    if (event.location && event.location.lat !== undefined && event.location.lng !== undefined) {
+        latLng = event.location;
+    } else if (event.latLng && Array.isArray(event.latLng) && event.latLng.length === 2) {
+        latLng = { lat: event.latLng[0], lng: event.latLng[1] };
+    }
     
     // Parse the event time
     const eventDate = new Date(event.time);
@@ -182,9 +435,25 @@ function editEvent(index) {
     hours = hours % 12;
     hours = hours ? hours : 12;
     
-    wizardData.date = dateStr;
-    wizardData.time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    wizardData.ampm = ampm;
+    // Pre-populate wizard data with all fields
+    // Support both new format (dates array) and legacy format (single date)
+    const eventDates = event.dates || (dateStr ? [dateStr] : []);
+    
+    wizardData = {
+        category: event.category,
+        name: event.name,
+        venue: event.venue || '',
+        location: latLng ? `Lat: ${latLng.lat.toFixed(4)}, Lng: ${latLng.lng.toFixed(4)}` : '',
+        description: event.description || '',
+        target: event.target || '',
+        targetLink: event.targetLink || '',
+        preparation: event.preparation || '',
+        dates: eventDates, // Multi-select dates
+        date: eventDates[0] || dateStr, // Primary date (first selected)
+        time: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+        ampm: ampm,
+        latlng: latLng
+    };
     
     // Open wizard
     openAddEventForm(wizardData.latlng, true);
@@ -271,7 +540,11 @@ function openAddEventForm(latlng, isEdit = false) {
 // Prefill form fields for editing
 function prefillFormFields() {
     document.getElementById('event-name').value = wizardData.name || '';
+    document.getElementById('event-venue').value = wizardData.venue || '';
     document.getElementById('event-location').value = wizardData.location || '';
+    document.getElementById('event-target').value = wizardData.target || '';
+    document.getElementById('event-target-link').value = wizardData.targetLink || '';
+    document.getElementById('event-preparation').value = wizardData.preparation || '';
     document.getElementById('event-description').value = wizardData.description || '';
     
     // Set time display
@@ -369,7 +642,16 @@ function setupWizardEventListeners() {
         });
     });
     
-    // Location input
+    // Venue input
+    const venueInput = document.getElementById('event-venue');
+    venueInput.addEventListener('input', (e) => {
+        wizardData.venue = e.target.value;
+    });
+    
+    // Venue search functionality
+    setupVenueSearch();
+    
+    // Location input (coordinates display)
     const locationInput = document.getElementById('event-location');
     locationInput.addEventListener('input', (e) => {
         wizardData.location = e.target.value;
@@ -381,18 +663,29 @@ function setupWizardEventListeners() {
         wizardData.name = e.target.value;
     });
     
+    // Target input
+    const targetInput = document.getElementById('event-target');
+    targetInput.addEventListener('input', (e) => {
+        wizardData.target = e.target.value;
+    });
+    
+    // Target link input
+    const targetLinkInput = document.getElementById('event-target-link');
+    targetLinkInput.addEventListener('input', (e) => {
+        wizardData.targetLink = e.target.value;
+    });
+    
+    // Preparation input
+    const preparationInput = document.getElementById('event-preparation');
+    preparationInput.addEventListener('input', (e) => {
+        wizardData.preparation = e.target.value;
+    });
+    
     // Description input
     const descInput = document.getElementById('event-description');
     descInput.addEventListener('input', (e) => {
         wizardData.description = e.target.value;
     });
-    
-    // Use map location button
-    document.getElementById('use-map-location').onclick = () => {
-        // Toggle mini map visibility
-        const miniMapContainer = document.getElementById('mini-map-container');
-        miniMapContainer.classList.toggle('expanded');
-    };
 }
 
 // Select a category
@@ -453,7 +746,7 @@ function clearQuickTimeSelection() {
     document.querySelectorAll('.quick-time-btn').forEach(b => b.classList.remove('selected'));
 }
 
-// Generate date buttons for date scroller
+// Generate date buttons for date scroller (supports multi-select)
 function generateDateButtons() {
     const dateScroller = document.getElementById('date-scroller');
     dateScroller.innerHTML = '';
@@ -461,7 +754,7 @@ function generateDateButtons() {
     const currentTrip = Storage.currentTrip;
     let startDate, endDate;
     
-    if (currentTrip.startDate && currentTrip.endDate) {
+    if (currentTrip && currentTrip.startDate && currentTrip.endDate) {
         startDate = new Date(currentTrip.startDate);
         endDate = new Date(currentTrip.endDate);
     } else {
@@ -472,6 +765,17 @@ function generateDateButtons() {
     }
     
     const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    let selectedDateBtn = null;
+    
+    // Initialize dates array if empty (for new events, select today by default)
+    if (!wizardData.dates || wizardData.dates.length === 0) {
+        if (wizardData.date) {
+            wizardData.dates = [wizardData.date];
+        } else {
+            const today = new Date().toISOString().split('T')[0];
+            wizardData.dates = [today];
+        }
+    }
     
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const dateBtn = document.createElement('button');
@@ -487,24 +791,39 @@ function generateDateButtons() {
             <span class="date-date">${month} ${dateNum}</span>
         `;
         
-        // Select today by default or previously selected date
-        const today = new Date().toISOString().split('T')[0];
-        if (wizardData.date) {
-            if (dateBtn.dataset.date === wizardData.date) {
-                dateBtn.classList.add('selected');
-            }
-        } else if (dateBtn.dataset.date === today) {
+        const dateStr = dateBtn.dataset.date;
+        
+        // Select dates that are in wizardData.dates array
+        if (wizardData.dates.includes(dateStr)) {
             dateBtn.classList.add('selected');
-            wizardData.date = today;
+            if (!selectedDateBtn) selectedDateBtn = dateBtn;
         }
         
+        // Toggle selection on click (multi-select)
         dateBtn.addEventListener('click', () => {
-            document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));
-            dateBtn.classList.add('selected');
-            wizardData.date = dateBtn.dataset.date;
+            if (wizardData.dates.includes(dateStr)) {
+                // Deselect if already selected (but keep at least one date)
+                if (wizardData.dates.length > 1) {
+                    wizardData.dates = wizardData.dates.filter(d => d !== dateStr);
+                    dateBtn.classList.remove('selected');
+                }
+            } else {
+                // Select new date
+                wizardData.dates.push(dateStr);
+                dateBtn.classList.add('selected');
+            }
+            // Update primary date to first selected date
+            wizardData.date = wizardData.dates[0];
         });
         
         dateScroller.appendChild(dateBtn);
+    }
+    
+    // Scroll to first selected date after generating buttons
+    if (selectedDateBtn) {
+        setTimeout(() => {
+            selectedDateBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }, 100);
     }
 }
 
@@ -523,7 +842,9 @@ function initMiniMap() {
     const miniMapContainer = document.getElementById('mini-map');
     if (!miniMapContainer || miniMap) return;
     
-    const defaultLatLng = wizardData.latlng || { lat: 22.3193, lng: 114.1694 };
+    // Default to center on existing trip events
+    const defaultCenter = getTripEventsCenter() || { lat: 22.3193, lng: 114.1694 };
+    const defaultLatLng = wizardData.latlng || defaultCenter;
     
     miniMap = L.map('mini-map', {
         center: [defaultLatLng.lat, defaultLatLng.lng],
@@ -536,20 +857,124 @@ function initMiniMap() {
         maxZoom: 19
     }).addTo(miniMap);
     
-    // Add marker
-    let marker = L.marker([defaultLatLng.lat, defaultLatLng.lng]).addTo(miniMap);
+    // Add marker if latlng is set
+    let marker = null;
+    if (wizardData.latlng) {
+        marker = L.marker([wizardData.latlng.lat, wizardData.latlng.lng]).addTo(miniMap);
+    }
+    
+    // Add markers for existing events
+    addExistingEventsToMiniMap();
     
     // Click on map to set location
     miniMap.on('click', (e) => {
         const { lat, lng } = e.latlng;
         wizardData.latlng = { lat, lng };
         
-        // Update marker position
-        marker.setLatLng([lat, lng]);
+        // Remove existing marker
+        miniMap.eachLayer((layer) => {
+            if (layer instanceof L.Marker) {
+                miniMap.removeLayer(layer);
+            }
+        });
+        
+        // Add new marker
+        marker = L.marker([lat, lng]).addTo(miniMap);
         
         // Update location input
         document.getElementById('event-location').value = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
         wizardData.location = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+    });
+    
+    // Setup refresh button
+    setupMiniMapRefresh();
+}
+
+// Get center of existing trip events
+function getTripEventsCenter() {
+    const events = Storage.events || [];
+    if (events.length === 0) return null;
+    
+    let totalLat = 0;
+    let totalLng = 0;
+    let count = 0;
+    
+    events.forEach(event => {
+        let latLng = null;
+        if (event.location && event.location.lat !== undefined && event.location.lng !== undefined) {
+            latLng = event.location;
+        } else if (event.latLng && Array.isArray(event.latLng) && event.latLng.length === 2) {
+            latLng = { lat: event.latLng[0], lng: event.latLng[1] };
+        }
+        
+        if (latLng) {
+            totalLat += latLng.lat;
+            totalLng += latLng.lng;
+            count++;
+        }
+    });
+    
+    if (count === 0) return null;
+    
+    return {
+        lat: totalLat / count,
+        lng: totalLng / count
+    };
+}
+
+// Add existing events markers to mini map
+function addExistingEventsToMiniMap() {
+    const events = Storage.events || [];
+    const bounds = [];
+    
+    events.forEach(event => {
+        let latLng = null;
+        if (event.location && event.location.lat !== undefined && event.location.lng !== undefined) {
+            latLng = event.location;
+        } else if (event.latLng && Array.isArray(event.latLng) && event.latLng.length === 2) {
+            latLng = { lat: event.latLng[0], lng: event.latLng[1] };
+        }
+        
+        if (latLng) {
+            L.circleMarker([latLng.lat, latLng.lng], {
+                radius: 6,
+                fillColor: '#A67C52',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(miniMap);
+            bounds.push([latLng.lat, latLng.lng]);
+        }
+    });
+    
+    // Fit bounds if we have multiple events
+    if (bounds.length > 1) {
+        miniMap.fitBounds(bounds, { padding: [20, 20] });
+    }
+}
+
+// Setup mini map refresh button
+function setupMiniMapRefresh() {
+    const refreshBtn = document.getElementById('mini-map-refresh');
+    if (!refreshBtn || !miniMap) return;
+    
+    refreshBtn.addEventListener('click', () => {
+        // Refresh map tiles by resetting the view
+        const center = miniMap.getCenter();
+        const zoom = miniMap.getZoom();
+        
+        // Animate button rotation
+        refreshBtn.style.transform = 'rotate(360deg)';
+        refreshBtn.style.transition = 'transform 0.5s ease';
+        
+        // Reset map view to refresh tiles
+        miniMap.invalidateSize();
+        
+        // Reset button rotation after animation
+        setTimeout(() => {
+            refreshBtn.style.transform = 'rotate(0deg)';
+        }, 500);
     });
 }
 
@@ -569,20 +994,44 @@ function updateReviewCard() {
     // Update event name
     document.getElementById('review-event-name').textContent = wizardData.name || 'Untitled Event';
     
-    // Update location
-    document.getElementById('review-location').textContent = wizardData.location || 'No location set';
+    // Update venue (show venue instead of location)
+    const reviewLocationEl = document.getElementById('review-location');
+    reviewLocationEl.textContent = wizardData.venue || 'No venue set';
     
-    // Update date
-    if (wizardData.date) {
+    // Update date - show all selected dates
+    const reviewDateEl = document.getElementById('review-date');
+    if (wizardData.dates && wizardData.dates.length > 0) {
+        if (wizardData.dates.length === 1) {
+            // Single date - show full format
+            const date = new Date(wizardData.dates[0]);
+            const dateStr = date.toLocaleDateString(Storage.currentLang === 'zh-TW' ? 'zh-TW' : 'en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            });
+            reviewDateEl.textContent = dateStr;
+        } else {
+            // Multiple dates - show compact format
+            const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+            const dateStrs = wizardData.dates.map(d => {
+                const date = new Date(d);
+                const dayName = dayNames[date.getDay()];
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                const day = date.getDate();
+                return `${dayName}, ${month} ${day}`;
+            });
+            reviewDateEl.innerHTML = dateStrs.join('<br>');
+        }
+    } else if (wizardData.date) {
         const date = new Date(wizardData.date);
         const dateStr = date.toLocaleDateString(Storage.currentLang === 'zh-TW' ? 'zh-TW' : 'en-US', {
             weekday: 'long',
             month: 'long',
             day: 'numeric'
         });
-        document.getElementById('review-date').textContent = dateStr;
+        reviewDateEl.textContent = dateStr;
     } else {
-        document.getElementById('review-date').textContent = 'No date selected';
+        reviewDateEl.textContent = 'No date selected';
     }
     
     // Update time
@@ -590,6 +1039,15 @@ function updateReviewCard() {
     const minute = document.getElementById('event-minute').textContent;
     const ampm = document.getElementById('event-ampm').textContent;
     document.getElementById('review-time').textContent = `${hour}:${minute} ${ampm}`;
+    
+    // Update target (show target in review)
+    const reviewTargetContainer = document.getElementById('review-target-container');
+    if (wizardData.target) {
+        reviewTargetContainer.classList.remove('hidden');
+        document.getElementById('review-target').textContent = wizardData.target;
+    } else {
+        reviewTargetContainer.classList.add('hidden');
+    }
     
     // Update notes
     const notesContainer = document.getElementById('review-notes-container');
@@ -711,7 +1169,11 @@ function saveStepData(step) {
     switch (step) {
         case 2:
             wizardData.name = document.getElementById('event-name').value;
+            wizardData.venue = document.getElementById('event-venue').value;
             wizardData.location = document.getElementById('event-location').value;
+            wizardData.target = document.getElementById('event-target').value;
+            wizardData.targetLink = document.getElementById('event-target-link').value;
+            wizardData.preparation = document.getElementById('event-preparation').value;
             wizardData.description = document.getElementById('event-description').value;
             break;
             
@@ -746,15 +1208,19 @@ function submitEvent() {
     
     // Add or update event
     if (currentEditIndex !== null) {
-        // Update existing event
+        // Update existing event - store dates array and location object
         const events = Storage.events;
         events[currentEditIndex] = {
             name: wizardData.name,
-            location: wizardData.location,
+            venue: wizardData.venue,
+            location: wizardData.latlng ? { lat: wizardData.latlng.lat, lng: wizardData.latlng.lng } : null,
             time: fullTime,
+            dates: wizardData.dates.length > 0 ? wizardData.dates : [wizardData.date], // Store multi-select dates
             description: wizardData.description,
             category: wizardData.category,
-            latLng: wizardData.latlng ? [wizardData.latlng.lat, wizardData.latlng.lng] : [22.3193, 114.1694]
+            target: wizardData.target,
+            targetLink: wizardData.targetLink,
+            preparation: wizardData.preparation
         };
         Storage.events = events;
         Storage.saveEvents();
@@ -762,10 +1228,29 @@ function submitEvent() {
         
         // Update marker
         MapModule.removeMarker(wizardData.name);
-        MapModule.addMarker(wizardData.latlng || [22.3193, 114.1694], wizardData.name, wizardData.category);
+        if (wizardData.latlng) {
+            MapModule.addMarker([wizardData.latlng.lat, wizardData.latlng.lng], wizardData.name, wizardData.category);
+        }
     } else {
-        // Add new event
-        addEvent(wizardData.name, wizardData.location, fullTime, wizardData.description, wizardData.category, wizardData.latlng);
+        // Add new event with dates array
+        const events = Storage.events;
+        const newEvent = {
+            name: wizardData.name,
+            venue: wizardData.venue,
+            location: wizardData.latlng ? { lat: wizardData.latlng.lat, lng: wizardData.latlng.lng } : null,
+            time: fullTime,
+            dates: wizardData.dates.length > 0 ? wizardData.dates : [wizardData.date], // Store multi-select dates
+            description: wizardData.description,
+            category: wizardData.category,
+            target: wizardData.target,
+            targetLink: wizardData.targetLink,
+            preparation: wizardData.preparation
+        };
+        events.push(newEvent);
+        Storage.events = events;
+        Storage.saveEvents();
+        renderEvents();
+        MapModule.addMarker([wizardData.latlng.lat, wizardData.latlng.lng], wizardData.name, wizardData.category, newEvent, events.length - 1);
     }
     
     // Close wizard
@@ -784,8 +1269,13 @@ function closeWizard() {
     wizardData = {
         category: '',
         name: '',
+        venue: '',
         location: '',
         description: '',
+        target: '',
+        targetLink: '',
+        preparation: '',
+        dates: [],  // Multi-select dates array
         date: '',
         time: '09:00',
         ampm: 'AM',
@@ -821,6 +1311,140 @@ function populateEventDateDropdown() {
     // This is now handled by generateDateButtons() in the wizard
 }
 
+// Setup venue search functionality
+function setupVenueSearch() {
+    const searchInput = document.getElementById('event-venue-search');
+    const searchBtn = document.getElementById('search-venue-btn');
+    const resultsContainer = document.getElementById('venue-search-results');
+    
+    if (!searchInput || !searchBtn || !resultsContainer) return;
+    
+    let debounceTimer;
+    
+    // Search on button click
+    searchBtn.addEventListener('click', () => {
+        const query = searchInput.value.trim();
+        if (query.length >= 2) {
+            searchVenue(query);
+        }
+    });
+    
+    // Search on Enter key
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const query = searchInput.value.trim();
+            if (query.length >= 2) {
+                searchVenue(query);
+            }
+        }
+    });
+    
+    // Search on input with debounce
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const query = searchInput.value.trim();
+            if (query.length >= 3) {
+                searchVenue(query);
+            } else {
+                resultsContainer.classList.add('hidden');
+            }
+        }, 300);
+    });
+    
+    // Close results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+}
+
+// Search venue using Photon API
+async function searchVenue(query) {
+    const resultsContainer = document.getElementById('venue-search-results');
+    
+    try {
+        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
+        const data = await response.json();
+        
+        if (data.features && data.features.length > 0) {
+            const venues = data.features.map(feature => ({
+                name: feature.properties.name || feature.properties.city || 'Unknown',
+                address: formatPhotonAddress(feature.properties),
+                lat: feature.geometry.coordinates[1],
+                lng: feature.geometry.coordinates[0]
+            }));
+            displayVenueSearchResults(venues);
+        } else {
+            resultsContainer.innerHTML = '<div class="venue-search-result-item"><span class="venue-search-result-name">No results found</span></div>';
+            resultsContainer.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Venue search error:', error);
+        resultsContainer.innerHTML = '<div class="venue-search-result-item"><span class="venue-search-result-name">Search error. Please try again.</span></div>';
+        resultsContainer.classList.remove('hidden');
+    }
+}
+
+// Format Photon address for venue search
+function formatPhotonAddress(props) {
+    const parts = [];
+    if (props.name) parts.push(props.name);
+    if (props.street) parts.push(props.street);
+    if (props.housenumber) parts.push(props.housenumber);
+    if (props.city) parts.push(props.city);
+    if (props.state) parts.push(props.state);
+    if (props.country) parts.push(props.country);
+    return parts.join(', ') || props.name || 'Unknown location';
+}
+
+// Display venue search results
+function displayVenueSearchResults(venues) {
+    const resultsContainer = document.getElementById('venue-search-results');
+    
+    resultsContainer.innerHTML = venues.map((venue, index) => `
+        <div class="venue-search-result-item" data-index="${index}">
+            <div class="venue-search-result-name">${venue.name}</div>
+            <div class="venue-search-result-address">${venue.address}</div>
+        </div>
+    `).join('');
+    
+    resultsContainer.classList.remove('hidden');
+    
+    // Add click handlers to results
+    resultsContainer.querySelectorAll('.venue-search-result-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const index = parseInt(item.dataset.index);
+            const venue = venues[index];
+            if (venue) {
+                // Set venue name
+                document.getElementById('event-venue').value = venue.name;
+                wizardData.venue = venue.name;
+                
+                // Set location coordinates
+                wizardData.latlng = { lat: venue.lat, lng: venue.lng };
+                document.getElementById('event-location').value = `Lat: ${venue.lat.toFixed(4)}, Lng: ${venue.lng.toFixed(4)}`;
+                
+                // Update mini map if initialized
+                if (miniMap) {
+                    miniMap.setView([venue.lat, venue.lng], 15);
+                    // Clear existing markers and add new one
+                    miniMap.eachLayer((layer) => {
+                        if (layer instanceof L.Marker) {
+                            miniMap.removeLayer(layer);
+                        }
+                    });
+                    L.marker([venue.lat, venue.lng]).addTo(miniMap);
+                }
+                
+                // Hide results
+                resultsContainer.classList.add('hidden');
+            }
+        });
+    });
+}
+
 // Export functions
 window.Events = {
     formatEventTime,
@@ -834,4 +1458,9 @@ window.Events = {
     clearAllEvents,
     openAddEventForm,
     populateEventDateDropdown
+};
+
+window.EventsModule = {
+    onReady: onEventsReady,
+    initEvents: true
 };

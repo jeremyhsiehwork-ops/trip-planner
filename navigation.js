@@ -156,16 +156,37 @@ function switchTripEditorPage(page) {
                 eventsSection.style.flex = '1';
                 eventsSection.style.maxWidth = '100%';
             }
+            // Update mobile toggle button state
+            const mobileToggleBtn = document.getElementById('mobile-events-toggle-btn');
+            if (mobileToggleBtn && window.innerWidth < 1024) {
+                mobileToggleBtn.classList.add('events-visible');
+            }
+            // Remove map-page class when not on map
+            tripPlannerView?.classList.remove('map-page');
             break;
             
         case 'map-editor':
-            // Show map full page
+            // Show map full page - hide events section on mobile, show on desktop
             if (mapSection) {
                 mapSection.classList.remove('hidden');
                 mapSection.style.flex = '1';
                 mapSection.classList.remove('collapsed');
             }
-            if (eventsSection) eventsSection.classList.add('hidden');
+            // Only hide events section on mobile (desktop shows both side by side)
+            if (window.innerWidth < 1024) {
+                if (eventsSection) eventsSection.classList.add('hidden');
+                // Update mobile toggle button state
+                const mobileToggleBtn = document.getElementById('mobile-events-toggle-btn');
+                if (mobileToggleBtn) {
+                    mobileToggleBtn.classList.remove('events-visible');
+                }
+                // Add map-page class for FAB visibility on mobile
+                tripPlannerView?.classList.add('map-page');
+            } else {
+                if (eventsSection) eventsSection.classList.remove('hidden');
+                // Remove map-page class on desktop
+                tripPlannerView?.classList.remove('map-page');
+            }
             // Refresh map
             setTimeout(() => {
                 if (window.Map && window.Map.map) {
