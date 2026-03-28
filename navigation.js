@@ -163,6 +163,15 @@ function switchTripEditorPage(page) {
             }
             // Remove map-page class when not on map
             tripPlannerView?.classList.remove('map-page');
+            
+            // Hide mobile events panel when on schedule page
+            const mobileEventsPanel = document.getElementById('mobile-events-panel');
+            if (mobileEventsPanel) {
+                mobileEventsPanel.classList.remove('expanded');
+            }
+            
+            // Reset FAB state so it can open the panel on first click when returning to map
+            window.mobileEventsPanelExpanded = false;
             break;
             
         case 'map-editor':

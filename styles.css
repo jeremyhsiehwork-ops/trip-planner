@@ -603,6 +603,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .mobile-filter-item label {
@@ -633,6 +634,9 @@ body {
     align-items: center;
     gap: 6px;
     width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    min-width: 0;
 }
 
 .mobile-filters-panel .date-scroller {
@@ -644,7 +648,6 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding: 4px;
-    width: 100%;
     min-width: 0;
 }
 
@@ -678,8 +681,9 @@ body {
 
 .mobile-filters-panel .date-btn {
     flex: 0 0 auto;
-    min-width: 60px;
-    padding: 8px 12px;
+    min-width: 50px;
+    max-width: 70px;
+    padding: 6px 8px;
     border: 2px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
@@ -687,6 +691,8 @@ body {
     scroll-snap-align: start;
     transition: all 0.2s ease;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .mobile-filters-panel .date-btn:hover {
@@ -726,6 +732,8 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
+    width: 100vw;
+    max-width: 100%;
     background: var(--color-surface);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
@@ -1099,6 +1107,9 @@ body {
     align-items: center;
     gap: 8px;
     width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    min-width: 0;
 }
 
 .filters-panel .date-scroller {
@@ -1110,7 +1121,6 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding: 4px;
-    width: 100%;
     min-width: 0;
 }
 
@@ -1144,8 +1154,9 @@ body {
 
 .filters-panel .date-btn {
     flex: 0 0 auto;
-    min-width: 70px;
-    padding: 10px 14px;
+    min-width: 60px;
+    max-width: 80px;
+    padding: 8px 10px;
     border: 2px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
@@ -1153,6 +1164,9 @@ body {
     scroll-snap-align: start;
     transition: all 0.2s ease;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .filters-panel .date-btn:hover {
@@ -1624,6 +1638,38 @@ body {
 .settings-danger-btn svg {
     width: 18px;
     height: 18px;
+}
+
+/* Version Section */
+.version-section {
+    text-align: center;
+    padding: 20px 16px;
+    background: transparent;
+    box-shadow: none;
+    margin-bottom: 24px;
+}
+
+.version-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.version-text {
+    font-size: 13px;
+    color: var(--color-secondary);
+    margin: 0;
+}
+
+.version-text #app-version {
+    font-weight: 500;
+    color: var(--color-accent);
+}
+
+.made-with {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin: 0;
 }
 
 /* ============================================

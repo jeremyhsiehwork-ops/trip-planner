@@ -1,5 +1,5 @@
 // PWA Update Checker Module
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 
 const UpdateChecker = {
     currentVersion: APP_VERSION,
@@ -60,16 +60,8 @@ const UpdateChecker = {
                 }
             }
             
-            // Also check version.json file if exists
-            const response = await fetch('/version.json?t=' + Date.now(), { 
-                cache: 'no-cache' 
-            });
-            if (response.ok) {
-                const data = await response.json();
-                if (data.version !== this.currentVersion) {
-                    this.showUpdateNotification(data.version);
-                }
-            }
+            // Note: version.json check removed - using APP_VERSION constant instead
+            // If you want to use version.json, create the file and uncomment this code
             
             if (manual) {
                 this.showUpToDateMessage();

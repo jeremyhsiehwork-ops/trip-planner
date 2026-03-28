@@ -787,7 +787,8 @@ function showHomePage() {
 // MOBILE EVENTS PANEL (Map Bottom Sheet)
 // ============================================
 
-let mobileEventsPanelExpanded = false;
+// Export mobileEventsPanelExpanded so navigation can reset it
+window.mobileEventsPanelExpanded = false;
 
 // Setup mobile events panel (slides up from bottom of map)
 function setupMobileEventsPanel() {
@@ -801,7 +802,7 @@ function setupMobileEventsPanel() {
     // FAB button - toggle panel visibility
     if (fabBtn) {
         fabBtn.addEventListener('click', () => {
-            mobileEventsPanelExpanded = !mobileEventsPanelExpanded;
+            window.mobileEventsPanelExpanded = !window.mobileEventsPanelExpanded;
             updateMobileEventsPanelState();
         });
     }
@@ -814,24 +815,24 @@ function setupMobileEventsPanel() {
         // Touch events
         panelHeader.addEventListener('touchstart', (e) => {
             startY = e.touches[0].clientY;
-            startExpanded = mobileEventsPanelExpanded;
+            startExpanded = window.mobileEventsPanelExpanded;
         }, { passive: true });
         
         panelHeader.addEventListener('touchend', (e) => {
             const deltaY = startY - e.changedTouches[0].clientY;
             // Swipe up to expand, swipe down to collapse
             if (deltaY > 50 && !startExpanded) {
-                mobileEventsPanelExpanded = true;
+                window.mobileEventsPanelExpanded = true;
                 updateMobileEventsPanelState();
             } else if (deltaY < -50 && startExpanded) {
-                mobileEventsPanelExpanded = false;
+                window.mobileEventsPanelExpanded = false;
                 updateMobileEventsPanelState();
             }
         }, { passive: true });
         
         // Click to toggle (if not dragging)
         panelHeader.addEventListener('click', () => {
-            mobileEventsPanelExpanded = !mobileEventsPanelExpanded;
+            window.mobileEventsPanelExpanded = !window.mobileEventsPanelExpanded;
             updateMobileEventsPanelState();
         });
     }
@@ -840,7 +841,7 @@ function setupMobileEventsPanel() {
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            mobileEventsPanelExpanded = false;
+            window.mobileEventsPanelExpanded = false;
             updateMobileEventsPanelState();
         });
     }
@@ -966,7 +967,7 @@ function updateMobileEventsPanelState() {
     const fabIcon = fabBtn?.querySelector('svg');
     
     if (panel) {
-        if (mobileEventsPanelExpanded) {
+        if (window.mobileEventsPanelExpanded) {
             panel.classList.add('expanded');
         } else {
             panel.classList.remove('expanded');
@@ -975,7 +976,7 @@ function updateMobileEventsPanelState() {
     
     // Update FAB button icon - rotate when expanded
     if (fabIcon) {
-        if (mobileEventsPanelExpanded) {
+        if (window.mobileEventsPanelExpanded) {
             fabIcon.style.transform = 'rotate(180deg)';
         } else {
             fabIcon.style.transform = 'rotate(0deg)';
